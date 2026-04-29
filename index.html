@@ -2277,7 +2277,32 @@
           return phonemes.slice(-tailPhones.length).join(" ") === tail;
         });
         if (!good.length) return null;
-        const pick = good[Math.floor(Math.random() * good.length)];
+
+        // Group by syllable count
+        const bySylCount = {};
+        good.forEach(({ word, phonemes }) => {
+          const n = phonemes.filter((p) => /\d/.test(p)).length;
+          (bySylCount[n] = bySylCount[n] || []).push({ word, phonemes });
+        });
+
+        // Try longest groups first, preferring unused words
+        const counts = Object.keys(bySylCount)
+          .map(Number)
+          .sort((a, b) => b - a);
+        for (const count of counts) {
+          const fresh = bySylCount[count].filter(
+            (c) => !usedRhymeWords.has(c.word),
+          );
+          if (fresh.length) {
+            const pick = fresh[Math.floor(Math.random() * fresh.length)];
+            usedRhymeWords.add(pick.word);
+            return pick;
+          }
+        }
+
+        // All candidates have been used — fall back to longest group, allow repeats
+        const pool = bySylCount[counts[0]];
+        const pick = pool[Math.floor(Math.random() * pool.length)];
         usedRhymeWords.add(pick.word);
         return pick;
       }
@@ -2417,7 +2442,8 @@
 
           if (!tail) continue;
 
-          const allowedSylCounts = target.sIdx === 0 ? [1, 2] : [1];
+          const allowedSylCounts = target.sIdx === 0 ? [1, 2, 3, 4, 5] : [1];
+
           let pick = pickCandidateByTail(tail, target.oldSyl, allowedSylCounts);
 
           if (pick) {
