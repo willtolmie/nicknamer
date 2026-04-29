@@ -1,0 +1,2760 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Nicknamer - Playing with Words Final Project</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- <script type="module">
+      // 2. Import directly from the ESM build
+      import { KokoroTTS } from "https://cdn.jsdelivr.net/npm/kokoro-js@latest/dist/kokoro.web.js";
+
+      let tts = null;
+      let ttsLoading = false;
+
+      async function initTTS() {
+        if (tts || ttsLoading) return;
+        ttsLoading = true;
+
+        const btn = document.getElementById("nicknamifyBtn");
+        const orig = btn.textContent;
+        btn.textContent = "⏳ Loading voice…";
+        btn.disabled = true;
+
+        // Use the specific V1.0 repo to avoid the 401 Unauthorized error
+        const model_id = "onnx-community/Kokoro-82M-v1.0-ONNX";
+
+        try {
+          // NOTE: We use the imported KokoroTTS class directly
+          tts = await KokoroTTS.from_pretrained(model_id, {
+            dtype: "q8",
+            device: "wasm", // "wasm" is safest for compatibility; use "webgpu" for speed if supported
+          });
+          console.log("Kokoro TTS ready ✓");
+        } catch (e) {
+          console.error("Initialization failed:", e);
+        } finally {
+          btn.textContent = orig;
+          btn.disabled = false;
+          ttsLoading = false;
+        }
+      }
+
+      // Make sure your button listener is also inside this module
+      // or attached to the window so the HTML can see it
+      document
+        .getElementById("nicknamifyBtn")
+        .addEventListener("click", initTTS);
+
+      document.addEventListener("pointerdown", initTTS, { once: true });
+
+      const CMU_TO_IPA = {
+        AA: "ɑ",
+        AE: "a",
+        AH: "ʌ",
+        AO: "ɔ",
+        AW: "aʊ",
+        AY: "aɪ",
+        B: "b",
+        CH: "tʃ",
+        D: "d",
+        DH: "ð",
+        EH: "ɛ",
+        ER: "ɜr",
+        EY: "eɪ",
+        F: "f",
+        G: "ɡ",
+        HH: "h",
+        IH: "ɪ",
+        IY: "i",
+        JH: "dʒ",
+        K: "k",
+        L: "l",
+        M: "m",
+        N: "n",
+        NG: "ŋ",
+        OW: "oʊ",
+        OY: "ɔɪ",
+        P: "p",
+        R: "r",
+        S: "s",
+        SH: "ʃ",
+        T: "t",
+        TH: "θ",
+        UH: "ʊ",
+        UW: "u",
+        V: "v",
+        W: "w",
+        Y: "j",
+        Z: "z",
+        ZH: "ʒ",
+      };
+
+      function phonemesToIPA(phonemes) {
+        return phonemes
+          .map((p) => CMU_TO_IPA[p.replace(/[012]$/, "")] ?? "")
+          .join("");
+      }
+
+      /**
+       * Two-track TTS:
+       *   { type:"word", word:"cope" }      → plain text, Kokoro's own G2P (best quality)
+       *   { type:"ipa",  ipa:"...", word:"cope" } → inline [word](/ipa/) syntax
+       * This avoids our lossy CMU→IPA mapping for dictionary words.
+       */
+      window.speakTokens = async function (tokens) {
+        if (!tokens?.length) return;
+
+        const textParts = tokens.map((tok) => {
+          if (tok.type === "word") return tok.word;
+          // IPA inline syntax: [display text](/ipa/)
+          return `[${tok.word}](/${tok.ipa}/)`;
+        });
+        const text = textParts.join(" ");
+        console.log("[Kokoro] input:", text);
+
+        if (!tts) {
+          const words = tokens.map((t) => t.word ?? "").join(" ");
+          const utt = new SpeechSynthesisUtterance(words);
+          utt.lang = "en-US";
+          utt.rate = 0.85;
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utt);
+          return;
+        }
+
+        const audio = await tts.generate(text, { voice: "af_heart" });
+        const blob = new Blob([audio.buffer], { type: "audio/wav" });
+        const url = URL.createObjectURL(blob);
+        const a = new Audio(url);
+        a.onended = () => URL.revokeObjectURL(url);
+        a.play();
+      };
+    </script> -->
+    <style>
+      :root {
+        --red: #f9a8b8;
+        --blue: #93c5e8;
+        --yellow: #fce98a;
+        --orange: #f9c490;
+        --teal: #86dcc8;
+        --purple: #c8b4f0;
+        --bg: #fdf6ff;
+        --ink: #2d2640;
+        --ink-mid: #5a5270;
+        --card: #ffffff;
+        --shadow: rgba(100, 80, 140, 0.1);
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Nunito", sans-serif;
+        background: var(--bg);
+        background-image:
+          radial-gradient(
+            circle at 12% 18%,
+            rgba(200, 180, 240, 0.18) 0%,
+            transparent 45%
+          ),
+          radial-gradient(
+            circle at 88% 78%,
+            rgba(134, 220, 200, 0.18) 0%,
+            transparent 45%
+          ),
+          radial-gradient(
+            circle at 50% 50%,
+            rgba(252, 233, 138, 0.12) 0%,
+            transparent 60%
+          );
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 2rem 1rem 4rem;
+        overflow-x: hidden;
+      }
+      ol {
+        margin: 0;
+        padding: 0;
+      }
+      table td,
+      table th {
+        padding: 0;
+      }
+
+      .c5 {
+        border-right-style: solid;
+        padding: 5pt;
+        border-bottom-color: #000;
+        border-top-width: 1pt;
+        border-right-width: 1pt;
+        border-left-color: #000;
+        vertical-align: top;
+        border-right-color: #000;
+        border-left-width: 1pt;
+        border-top-style: solid;
+        border-left-style: solid;
+        border-bottom-width: 1pt;
+        width: 125.2pt;
+        border-top-color: #000;
+        border-bottom-style: solid;
+      }
+      .c21 {
+        border-right-style: solid;
+        padding: 5pt;
+        border-bottom-color: #000;
+        border-top-width: 1pt;
+        border-right-width: 1pt;
+        border-left-color: #000;
+        vertical-align: top;
+        border-right-color: #000;
+        border-left-width: 1pt;
+        border-top-style: solid;
+        border-left-style: solid;
+        border-bottom-width: 1pt;
+        width: 186.8pt;
+        border-top-color: #000;
+        border-bottom-style: solid;
+      }
+      .c8 {
+        border-right-style: solid;
+        padding: 5pt;
+        border-bottom-color: #000;
+        border-top-width: 1pt;
+        border-right-width: 1pt;
+        border-left-color: #000;
+        vertical-align: top;
+        border-right-color: #000;
+        border-left-width: 1pt;
+        border-top-style: solid;
+        border-left-style: solid;
+        border-bottom-width: 1pt;
+        width: 156pt;
+        border-top-color: #000;
+        border-bottom-style: solid;
+      }
+      .c0 {
+        font-weight: 400;
+        text-decoration: none;
+        vertical-align: baseline;
+      }
+      .c17 {
+        padding-top: 0pt;
+        padding-bottom: 0pt;
+        orphans: 2;
+        widows: 2;
+        text-align: justify;
+      }
+      .c11 {
+        padding-top: 0pt;
+        padding-bottom: 0pt;
+        orphans: 2;
+        widows: 2;
+        text-align: left;
+      }
+      .c1 {
+        padding-top: 0pt;
+        padding-bottom: 0pt;
+        orphans: 2;
+        widows: 2;
+        text-align: left;
+      }
+      .c18 {
+        color: #000;
+        text-decoration: none;
+        vertical-align: baseline;
+        font-style: normal;
+      }
+      .c10 {
+        color: #000;
+        text-decoration: none;
+        vertical-align: baseline;
+        font-style: normal;
+      }
+      .c4 {
+        color: #000;
+        text-decoration: none;
+        vertical-align: baseline;
+        font-style: italic;
+      }
+      .c24 {
+        border-spacing: 0;
+        border-collapse: collapse;
+        margin-right: 0px;
+        justify-self: center;
+      }
+      .c14 {
+        padding-top: 0pt;
+        padding-bottom: 0pt;
+        text-align: left;
+      }
+      .c15 {
+        padding-top: 0pt;
+        padding-bottom: 0pt;
+        text-align: center;
+      }
+      .c20 {
+        background-color: #fff;
+        max-width: 468pt;
+        padding: 72pt;
+        margin: auto;
+      }
+      .c9 {
+        text-decoration: underline;
+      }
+      .c22 {
+        width: 33%;
+        height: 1px;
+      }
+      .c3 {
+        font-weight: 400;
+      }
+      .c16 {
+        font-weight: 700;
+      }
+      .c6 {
+        font-style: italic;
+      }
+      .c2 {
+        height: 0pt;
+      }
+      .c12 {
+        font-size: 10pt;
+      }
+
+      /* ── TITLE ── */
+      .title-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        margin-bottom: 0.3rem;
+        flex-wrap: wrap;
+      }
+      .title-letter {
+        font-family: "Fredoka One", sans-serif;
+        font-size: clamp(2.2rem, 6vw, 3.6rem);
+        line-height: 1;
+        display: inline-block;
+        position: relative;
+        border-radius: 10px;
+        padding: 0.08em 0.13em;
+        margin: 0.05em;
+        color: var(--ink);
+        box-shadow:
+          0 5px 0 rgba(100, 80, 140, 0.18),
+          0 8px 20px rgba(100, 80, 140, 0.1);
+        animation: wobble 3s ease-in-out infinite;
+        cursor: default;
+        user-select: none;
+      }
+      .title-letter:nth-child(1) {
+        background: var(--red);
+        animation-delay: 0s;
+      }
+      .title-letter:nth-child(2) {
+        background: var(--blue);
+        animation-delay: 0.15s;
+      }
+      .title-letter:nth-child(3) {
+        background: var(--yellow);
+        animation-delay: 0.3s;
+      }
+      .title-letter:nth-child(4) {
+        background: var(--orange);
+        animation-delay: 0.45s;
+      }
+      .title-letter:nth-child(5) {
+        background: var(--teal);
+        animation-delay: 0.6s;
+      }
+      .title-letter:nth-child(6) {
+        background: var(--purple);
+        animation-delay: 0.75s;
+      }
+      .title-letter:nth-child(7) {
+        background: var(--red);
+        animation-delay: 0.9s;
+      }
+      .title-letter:nth-child(8) {
+        background: var(--blue);
+        animation-delay: 1.05s;
+      }
+      .title-letter:nth-child(9) {
+        background: var(--yellow);
+        animation-delay: 1.2s;
+      }
+      .title-letter:nth-child(10) {
+        background: var(--orange);
+        animation-delay: 1.35s;
+      }
+      .title-letter:nth-child(11) {
+        background: var(--teal);
+        animation-delay: 1.5s;
+      }
+      .title-letter:nth-child(12) {
+        background: var(--purple);
+        animation-delay: 1.65s;
+      }
+      .title-letter:nth-child(13) {
+        background: var(--red);
+        animation-delay: 1.8s;
+      }
+      .title-letter:nth-child(14) {
+        background: var(--blue);
+        animation-delay: 1.95s;
+      }
+      .title-letter:nth-child(15) {
+        background: var(--yellow);
+        animation-delay: 2.1s;
+      }
+      .title-letter:nth-child(16) {
+        background: var(--orange);
+        animation-delay: 2.25s;
+      }
+      .title-letter:nth-child(17) {
+        background: var(--teal);
+        animation-delay: 1.5s;
+      }
+      .title-letter:nth-child(18) {
+        background: var(--purple);
+        animation-delay: 1.65s;
+      }
+      .title-letter:nth-child(19) {
+        background: var(--red);
+        animation-delay: 1.8s;
+      }
+      .title-letter:nth-child(20) {
+        background: var(--blue);
+        animation-delay: 1.95s;
+      }
+      .title-letter:nth-child(21) {
+        background: var(--yellow);
+        animation-delay: 2.1s;
+      }
+      .title-letter:nth-child(22) {
+        background: var(--orange);
+        animation-delay: 2.25s;
+      }
+      .title-spacer {
+        display: inline-block;
+        width: 0em;
+        min-width: 0;
+        background: transparent;
+      }
+      .title-row {
+        margin-bottom: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .title-letter::before,
+      .title-letter::after {
+        content: "";
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        background: rgba(45, 38, 64, 0.3);
+        border-radius: 50%;
+        top: 18%;
+      }
+      .title-letter::before {
+        left: 22%;
+      }
+      .title-letter::after {
+        right: 22%;
+      }
+      .author-box {
+        margin: 2.5rem 0 0 0;
+        text-align: center;
+        background: var(--card);
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        box-shadow: 0 4px 15px var(--shadow);
+        border: 2px solid var(--purple);
+      }
+      .author-name {
+        font-weight: 800;
+        color: var(--ink);
+        font-size: 0.9rem;
+      }
+
+      /* ── CONTENT SECTIONS ── */
+      .content-section {
+        width: 80%;
+        max-width: 1000px;
+        padding: 0 1rem;
+      }
+      .section-heading {
+        display: flex;
+        flex-wrap: wrap;
+        row-gap: 18px;
+        column-gap: 6px;
+        margin-top: 2.5rem;
+        margin-bottom: 2rem;
+        justify-content: center;
+      }
+      .sub-letter {
+        font-family: "Fredoka One", sans-serif;
+        font-size: 1.2rem;
+        padding: 0.2em 0.4em;
+        border-radius: 8px;
+        background: var(--teal);
+        color: var(--ink);
+        box-shadow: 0 3px 0 var(--shadow);
+      }
+      .section-text {
+        line-height: 1.75;
+        color: var(--ink-mid);
+        font-weight: 600;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 20px;
+        box-shadow: 0 5px 15px var(--shadow);
+        margin-bottom: 1.5rem;
+      }
+      @keyframes wobble {
+        0%,
+        100% {
+          transform: rotate(-2deg) translateY(0);
+        }
+        25% {
+          transform: rotate(2deg) translateY(-4px);
+        }
+        75% {
+          transform: rotate(-1deg) translateY(2px);
+        }
+      }
+      .title-letter:hover {
+        animation: none;
+        transform: scale(1.25) rotate(-4deg);
+        z-index: 10;
+        transition: transform 0.15s;
+      }
+      .sub {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--ink-mid);
+        letter-spacing: 0.04em;
+        margin-bottom: 2.2rem;
+        opacity: 0.85;
+      }
+
+      /* ── INPUT + BUTTON ── */
+      .input-row {
+        display: flex;
+        gap: 0.6rem;
+        width: 80%;
+        max-width: 800px;
+        margin-top: 2rem;
+      }
+      input {
+        flex: 1;
+        padding: 0.9rem 1.2rem;
+        font-size: 1.15rem;
+        font-family: "Nunito", sans-serif;
+        font-weight: 700;
+        border-radius: 18px;
+        border: 3px solid var(--blue);
+        outline: none;
+        color: var(--ink);
+        background: #fff;
+        box-shadow: 0 4px 0 rgba(147, 197, 232, 0.35);
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      input:focus {
+        border-color: var(--purple);
+        box-shadow: 0 4px 0 rgba(200, 180, 240, 0.4);
+      }
+      input::placeholder {
+        opacity: 0.45;
+        font-weight: 600;
+      }
+
+      .big-btn {
+        font-family: "Fredoka One", sans-serif;
+        font-size: 1.2rem;
+        letter-spacing: 0.03em;
+        background: var(--purple);
+        color: var(--ink);
+        border: none;
+        border-radius: 18px;
+        padding: 0.9rem 1.5rem;
+        cursor: pointer;
+        box-shadow:
+          0 5px 0 #a898d4,
+          0 8px 18px rgba(200, 180, 240, 0.35);
+        transition:
+          transform 0.12s,
+          box-shadow 0.12s;
+        white-space: nowrap;
+        position: relative;
+        top: 0;
+      }
+      .big-btn:hover {
+        transform: translateY(-3px);
+        box-shadow:
+          0 8px 0 #a898d4,
+          0 12px 20px rgba(200, 180, 240, 0.4);
+      }
+      .big-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 3px 0 #a898d4;
+      }
+
+      /* ── PRONUNCIATION PANEL ── */
+      .pron-panel {
+        width: 80%;
+        background: #fff;
+        border: 3px dashed var(--teal);
+        border-radius: 20px;
+        padding: 1rem 1.2rem;
+        display: none;
+        margin-bottom: 1.2rem;
+        margin-top: 2rem;
+      }
+      .pron-title {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #3daa93;
+        margin-bottom: 0.2rem;
+      }
+      .pron-sub {
+        font-size: 0.88rem;
+        opacity: 0.65;
+        margin-bottom: 0.75rem;
+        color: var(--ink-mid);
+      }
+      .pronunciation-row {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 0.6rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      .pronunciation-row label {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .pronunciation-row select {
+        width: 100%;
+        border: 2px solid var(--teal);
+        border-radius: 10px;
+        padding: 0.4rem 0.6rem;
+        background: #fff;
+        font-family: "Nunito", sans-serif;
+        font-size: 0.9rem;
+        color: var(--ink);
+      }
+      /* consonant rows get a slightly different border color */
+      .pronunciation-row.consonant-row select {
+        border-color: var(--orange);
+      }
+      .pronunciation-row.consonant-row label {
+        color: #b07030;
+      }
+
+      .pron-section-label {
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-mid);
+        opacity: 0.6;
+        margin: 0.8rem 0 0.3rem;
+      }
+
+      .content {
+        justify-items: center;
+
+        margin-bottom: 1.5rem;
+      }
+      .pron-actions {
+        margin-top: 0.6rem;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .sec-btn {
+        font-family: "Nunito", sans-serif;
+        font-weight: 800;
+        font-size: 0.9rem;
+        background: var(--teal);
+        color: var(--ink);
+        border: none;
+        border-radius: 12px;
+        padding: 0.45rem 1rem;
+        cursor: pointer;
+        box-shadow: 0 3px 0 #60c4ad;
+        transition:
+          transform 0.12s,
+          box-shadow 0.12s;
+      }
+      .sec-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 0 #60c4ad;
+      }
+      .sec-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 0 #60c4ad;
+      }
+
+      /* ── RESULT CARD ── */
+      .card {
+        width: 80%;
+        background: var(--card);
+        border-radius: 28px;
+        padding: 2rem 2rem 1.6rem;
+        box-shadow:
+          0 10px 0 rgba(100, 80, 140, 0.08),
+          0 20px 50px rgba(100, 80, 140, 0.12);
+        display: none;
+        border: 3px solid transparent;
+        position: relative;
+        overflow: hidden;
+        animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      @keyframes popIn {
+        from {
+          opacity: 0;
+          transform: scale(0.8) translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: linear-gradient(
+          90deg,
+          var(--red),
+          var(--orange),
+          var(--yellow),
+          var(--teal),
+          var(--blue),
+          var(--purple)
+        );
+      }
+      .card-label {
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #d4884a;
+        margin-bottom: 0.8rem;
+      }
+
+      /* ── NICKNAME DISPLAY ── */
+      .nickname-display {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 1.2rem;
+      }
+      .nickname-word {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+      }
+      .nick-letter {
+        font-family: "Fredoka One", sans-serif;
+        font-size: clamp(1.8rem, 5vw, 2.8rem);
+        color: var(--ink);
+        border-radius: 10px;
+        width: 1.5em;
+        height: 1.5em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow:
+          0 4px 0 rgba(100, 80, 140, 0.18),
+          0 6px 16px rgba(100, 80, 140, 0.1);
+        position: relative;
+        animation: letterPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      .nick-letter:nth-child(6n + 1) {
+        background: var(--red);
+        animation-delay: calc(var(--i) * 55ms);
+      }
+      .nick-letter:nth-child(6n + 2) {
+        background: var(--blue);
+        animation-delay: calc(var(--i) * 55ms);
+      }
+      .nick-letter:nth-child(6n + 3) {
+        background: var(--yellow);
+        animation-delay: calc(var(--i) * 55ms);
+      }
+      .nick-letter:nth-child(6n + 4) {
+        background: var(--orange);
+        animation-delay: calc(var(--i) * 55ms);
+      }
+      .nick-letter:nth-child(6n + 5) {
+        background: var(--teal);
+        animation-delay: calc(var(--i) * 55ms);
+      }
+      .nick-letter:nth-child(6n + 6) {
+        background: var(--purple);
+        animation-delay: calc(var(--i) * 55ms);
+      }
+      @keyframes letterPop {
+        from {
+          opacity: 0;
+          transform: scale(0.3) rotate(-15deg);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) rotate(0);
+        }
+      }
+      .nick-letter::before,
+      .nick-letter::after {
+        content: "";
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        background: rgba(45, 38, 64, 0.25);
+        border-radius: 50%;
+        top: 18%;
+      }
+      .nick-letter::before {
+        left: 22%;
+      }
+      .nick-letter::after {
+        right: 22%;
+      }
+
+      .definition {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+        text-align: center;
+      }
+      .example {
+        font-size: 0.9rem;
+        color: var(--ink-mid);
+        font-style: italic;
+        text-align: center;
+        margin-bottom: 1.2rem;
+      }
+      .card-actions {
+        display: flex;
+        justify-content: center;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+      }
+
+      /* ── NO RESULT ── */
+      .no-result {
+        width: 80%;
+        background: #fff0f4;
+        border: 3px solid var(--red);
+        border-radius: 20px;
+        padding: 1rem 1.5rem;
+        text-align: center;
+        display: none;
+        font-weight: 700;
+        color: #c06070;
+        font-size: 0.95rem;
+      }
+
+      /* ── FOOTER ── */
+      .footer {
+        margin-top: 3rem;
+        font-size: 0.8rem;
+        opacity: 0.35;
+        font-weight: 600;
+        color: var(--ink-mid);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TITLE -->
+    <div
+      class="title-container"
+      aria-label="Linguistic Analysis of Wordplay in Personalized Name-Calling and Nicknaming"
+    >
+      <div class="title-row">
+        <span class="title-letter">L</span><span class="title-letter">i</span
+        ><span class="title-letter">n</span><span class="title-letter">g</span
+        ><span class="title-letter">u</span><span class="title-letter">i</span
+        ><span class="title-letter">s</span><span class="title-letter">t</span
+        ><span class="title-letter">i</span><span class="title-letter">c</span>
+        <span
+          class="title-letter"
+          style="
+            background: transparent;
+            box-shadow: none;
+            width: 0.4em;
+            min-width: 0;
+          "
+        >
+        </span>
+        <span class="title-letter">A</span><span class="title-letter">n</span
+        ><span class="title-letter">a</span><span class="title-letter">l</span
+        ><span class="title-letter">y</span><span class="title-letter">s</span
+        ><span class="title-letter">i</span><span class="title-letter">s</span>
+      </div>
+      <div class="title-row">
+        <span class="title-letter">o</span><span class="title-letter">f</span>
+        <span
+          class="title-letter"
+          style="
+            background: transparent;
+            box-shadow: none;
+            width: 0.4em;
+            min-width: 0;
+          "
+        >
+        </span>
+        <span class="title-letter">W</span><span class="title-letter">o</span
+        ><span class="title-letter">r</span><span class="title-letter">d</span
+        ><span class="title-letter">p</span><span class="title-letter">l</span
+        ><span class="title-letter">a</span><span class="title-letter">y</span>
+      </div>
+      <div class="title-row">
+        <span class="title-letter">i</span><span class="title-letter">n</span>
+        <span
+          class="title-letter"
+          style="
+            background: transparent;
+            box-shadow: none;
+            width: 0.4em;
+            min-width: 0;
+          "
+        >
+        </span>
+        <span class="title-letter">P</span><span class="title-letter">e</span
+        ><span class="title-letter">r</span><span class="title-letter">s</span
+        ><span class="title-letter">o</span><span class="title-letter">n</span
+        ><span class="title-letter">a</span><span class="title-letter">l</span
+        ><span class="title-letter">i</span><span class="title-letter">z</span
+        ><span class="title-letter">e</span><span class="title-letter">d</span>
+      </div>
+      <div class="title-row">
+        <span class="title-letter">N</span><span class="title-letter">a</span
+        ><span class="title-letter">m</span><span class="title-letter">e</span
+        ><span class="title-letter">-</span><span class="title-letter">C</span
+        ><span class="title-letter">a</span><span class="title-letter">l</span
+        ><span class="title-letter">l</span><span class="title-letter">i</span
+        ><span class="title-letter">n</span><span class="title-letter">g</span>
+      </div>
+      <div class="title-row">
+        <span class="title-letter">a</span><span class="title-letter">n</span
+        ><span class="title-letter">d</span>
+      </div>
+      <div class="title-row">
+        <span class="title-letter">N</span><span class="title-letter">i</span
+        ><span class="title-letter">c</span><span class="title-letter">k</span
+        ><span class="title-letter">n</span><span class="title-letter">a</span
+        ><span class="title-letter">m</span><span class="title-letter">i</span
+        ><span class="title-letter">n</span><span class="title-letter">g</span>
+      </div>
+    </div>
+    <div class="author-box">
+      <span class="author-name"
+        >By Copeland Block, Ellie Feig, Will Tolmie and Tiffany Tran</span
+      >
+    </div>
+    <div class="content">
+      <div class="content-section">
+        <div class="section-heading">
+          <div>
+            <span class="sub-letter" style="background: var(--orange)">U</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">d</span
+            ><span class="sub-letter" style="background: var(--orange)">e</span
+            ><span class="sub-letter" style="background: var(--orange)">r</span
+            ><span class="sub-letter" style="background: var(--orange)">s</span
+            ><span class="sub-letter" style="background: var(--orange)">t</span
+            ><span class="sub-letter" style="background: var(--orange)">a</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">d</span
+            ><span class="sub-letter" style="background: var(--orange)">i</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">g</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--orange)">t</span
+            ><span class="sub-letter" style="background: var(--orange)">h</span
+            ><span class="sub-letter" style="background: var(--orange)">e</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--orange)">M</span
+            ><span class="sub-letter" style="background: var(--orange)">e</span
+            ><span class="sub-letter" style="background: var(--orange)">c</span
+            ><span class="sub-letter" style="background: var(--orange)">h</span
+            ><span class="sub-letter" style="background: var(--orange)">a</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">i</span
+            ><span class="sub-letter" style="background: var(--orange)">c</span
+            ><span class="sub-letter" style="background: var(--orange)">s</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--orange)">b</span
+            ><span class="sub-letter" style="background: var(--orange)">e</span
+            ><span class="sub-letter" style="background: var(--orange)">h</span
+            ><span class="sub-letter" style="background: var(--orange)">i</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">d</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--orange)">N</span
+            ><span class="sub-letter" style="background: var(--orange)">i</span
+            ><span class="sub-letter" style="background: var(--orange)">c</span
+            ><span class="sub-letter" style="background: var(--orange)">k</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">a</span
+            ><span class="sub-letter" style="background: var(--orange)">m</span
+            ><span class="sub-letter" style="background: var(--orange)">e</span
+            ><span class="sub-letter" style="background: var(--orange)">s</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--orange)">a</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">d</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--orange)">N</span
+            ><span class="sub-letter" style="background: var(--orange)">a</span
+            ><span class="sub-letter" style="background: var(--orange)">m</span
+            ><span class="sub-letter" style="background: var(--orange)">e</span
+            ><span class="sub-letter" style="background: var(--orange)">c</span
+            ><span class="sub-letter" style="background: var(--orange)">a</span
+            ><span class="sub-letter" style="background: var(--orange)">l</span
+            ><span class="sub-letter" style="background: var(--orange)">l</span
+            ><span class="sub-letter" style="background: var(--orange)">i</span
+            ><span class="sub-letter" style="background: var(--orange)">n</span
+            ><span class="sub-letter" style="background: var(--orange)">g</span>
+          </div>
+        </div>
+        <div class="section-text">
+          <p class="c17">
+            <span class="c0"
+              >Nicknames are a part of everyday life. We use them to connect
+              with friends and family, show friendliness to our coworkers, and
+              signal closeness. Beyond interactions with other people, we also
+              frequently modify the names of events, places, courses, and other
+              aspects of our lives. Wordplay, as it's known, presents itself
+              commonly in games and puzzles, conversational humor, and
+              broad-based media. Much of it feels clever and funny because it
+              depends on a recognizable connection between the original form and
+              the modified one. When people understand the reasoning behind
+              these modifications, wordplay can create a sense of shared
+              knowledge. Several linguistic aspects, including substitution,
+              minimal pairs, and periodic preservation make for effective puns,
+              nicknames, and name calling.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c17">
+            <span class="c3"
+              >In its simplest form, substitution refers to replacing a word, or
+              part of a word, with another sound or linguistic element. Many
+              nicknames and puns are created using different forms of
+              substitution, like onset (<span class="c9">Br</span>ook &rarr;
+              <span class="c9">Cr</span>ook), vowel (B<span class="c9">e</span>n
+              &rarr; B<span class="c9">u</span>n), coda (Ma<span class="c9"
+                >tt</span
+              >
+              &rarr; Ma<span class="c9">d</span>), blend/portmanteau (APMA 0360
+              &rarr; CRAPMA 3-Shitty), or affixation substitution (Shell &rarr;
+              Shelly).<sup><a href="#ftnt1" id="ftnt_ref1">1</a></sup>
+              Generally, the more layered the substitution is, such as combining
+              multiple substitution types, the more satisfying the pun feels.
+              For example, APMA 0360 &rarr; CRAPMA 3-Shitty works through
+              multiple overlapping and rhyming effects, while Ben &rarr; Bun
+              uses just one vowel change.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <table class="c24">
+            <tr class="c2">
+              <td class="c5">
+                <p class="c15">
+                  <span class="c18 c16">Substitution Type</span>
+                </p>
+              </td>
+              <td class="c21">
+                <p class="c15"><span class="c16 c18">Definition</span></p>
+              </td>
+              <td class="c8">
+                <p class="c15"><span class="c16">Example</span></p>
+              </td>
+            </tr>
+            <tr class="c2">
+              <td class="c5">
+                <p class="c15"><span class="c4 c3">Onset</span></p>
+              </td>
+              <td class="c21">
+                <p class="c14">
+                  <span class="c0">Changing the first consonant sound</span>
+                </p>
+              </td>
+              <td class="c8">
+                <p class="c14"><span class="c0">Brook &rarr; Crook</span></p>
+              </td>
+            </tr>
+            <tr class="c2">
+              <td class="c5">
+                <p class="c15"><span class="c4 c3">Coda</span></p>
+              </td>
+              <td class="c21">
+                <p class="c14">
+                  <span class="c0">Changing final consonant sound</span>
+                </p>
+              </td>
+              <td class="c8">
+                <p class="c14"><span class="c0">Matt &rarr; Mad</span></p>
+              </td>
+            </tr>
+            <tr class="c2">
+              <td class="c5">
+                <p class="c15"><span class="c4 c3">Vowel</span></p>
+              </td>
+              <td class="c21">
+                <p class="c14">
+                  <span class="c0">Changing only the vowel sound</span>
+                </p>
+              </td>
+              <td class="c8">
+                <p class="c14"><span class="c0">Ben &rarr; Bun</span></p>
+              </td>
+            </tr>
+            <tr class="c2">
+              <td class="c5">
+                <p class="c15"><span class="c4 c3">Blend/Portmanteau</span></p>
+              </td>
+              <td class="c21">
+                <p class="c14">
+                  <span class="c0"
+                    >Combining original name with a meaningful word</span
+                  >
+                </p>
+              </td>
+              <td class="c8">
+                <p class="c14">
+                  <span class="c0">APMA + crap &rarr; CRAPMA</span>
+                </p>
+              </td>
+            </tr>
+            <tr class="c2">
+              <td class="c5">
+                <p class="c15"><span class="c4 c3">Affixation</span></p>
+              </td>
+              <td class="c21">
+                <p class="c14">
+                  <span class="c0"
+                    >Adding a prefix or suffix to the original word</span
+                  >
+                </p>
+              </td>
+              <td class="c8">
+                <p class="c14"><span class="c0">Shell &rarr; Shelly</span></p>
+              </td>
+            </tr>
+            <tr class="c2">
+              <td class="c5">
+                <p class="c15"><span class="c3 c4">Rhyming</span></p>
+              </td>
+              <td class="c21">
+                <p class="c14">
+                  <span class="c0"
+                    >Adding or changing material so the new form rhymes with the
+                    original</span
+                  >
+                </p>
+              </td>
+              <td class="c8">
+                <p class="c14">
+                  <span class="c0">Trump &rarr; Dump Trump</span>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="section-text">
+          <p class="c17">
+            <span class="c3"
+              >Many forms of substitution are also minimal pairs&ndash;words
+              that are identical in all sounds but one (e.g. got vs get).<sup
+                ><a href="#ftnt2" id="ftnt_ref2">2</a></sup
+              >
+              Minimal pairs are the foundation of creating worthwhile nicknames,
+              and having an understanding of how different pairs interact with
+              each other can help create more complex forms. For example, APMA
+              1200 can be broken into several phoneme pairs: APMA: APP - muh,
+              1200: TWELV HUN-drid, and can be altered to exhibit several
+              qualities of the class: APMA 1200 &rarr; CRAPMA Twelve-bun-dread.
+              The modification makes use of different minimal pairs (apma &rarr;
+              crapma, hun &rarr; bun, drid &rarr; dread) while keeping an
+              identifying piece of the original form (twelve). Prosody
+              preservation maintains the rhythm and emotion behind original
+              speech and is necessary for the audience to understand the pun.
+              For example, when a word has a distinctive stress pattern, an
+              effective modification would attempt to preserve that prosody. For
+              example, Beyonc&eacute; &rarr; Beyon-slay works because it keeps
+              the rhythm and stress pattern of the original name intact. By
+              contrast, Beyonc&eacute; &rarr; Queen-onc&eacute; feels less
+              natural. Although <span class="c6">Bey</span> and
+              <span class="c6">Queen</span> are both one syllable, they are not
+              prosodically equivalent. <span class="c6">Queen</span> ends with
+              an /n/ sound, making the syllable feel closed and heavier: queen =
+              /kwi:n/. <span class="c6">Bey</span>, By contrast, is open and
+              lighter: bey = /be&#618;/.</span
+            >
+          </p>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <div class="section-heading">
+          <div>
+            <span class="sub-letter" style="background: var(--blue)">E</span
+            ><span class="sub-letter" style="background: var(--blue)">x</span
+            ><span class="sub-letter" style="background: var(--blue)">a</span
+            ><span class="sub-letter" style="background: var(--blue)">m</span
+            ><span class="sub-letter" style="background: var(--blue)">p</span
+            ><span class="sub-letter" style="background: var(--blue)">l</span
+            ><span class="sub-letter" style="background: var(--blue)">e</span
+            ><span class="sub-letter" style="background: var(--blue)">s</span>
+          </div>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >To better understand how phonological substitution works in real
+              contexts, we have compiled a number of nickname and wordplay
+              examples from three primary sources: historical and literary
+              texts, social media platforms, and personal interactions. This
+              range will let us capture both long-standing traditions of
+              wordplay and also more contemporary or rapidly evolving
+              forms.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3"
+              >From historical and literary sources, we see that playful
+              renaming has deep roots. For example, William Shakespeare often
+              used puns based on sound similarity, often relying on rhyming and
+              minimal pair structures. One well-known instance comes from
+              <span class="c6">Romeo and Juliet</span>, where Mercutio puns on
+              the word &ldquo;grave.&rdquo; As he dies, he says &ldquo;ask for
+              me tomorrow, and you shall find me a grave man.&rdquo; Grave here
+              means &ldquo;serious&rdquo; and &ldquo;dead/buried.&rdquo; The
+              humor comes from the phonological identity of the words paired
+              with two different meanings. Just a fun note &ndash;
+              <span class="c6">Gnomeo and Juliet</span>, the animated adaptation
+              of <span class="c6">Romeo and Juliet</span> with gnomes, is
+              another example of play on words. The name Romeo is transformed
+              into <span class="c6">Gnomeo</span> through onset substitution.
+              This pun keeps the original phonological structure while
+              introducing a new semantic element, making the reference
+              immediately recognizable and humorous.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >Moreover, in political contexts, nicknames have long been used to
+              convey critique or satire. For example, figures like Richard Nixon
+              were labeled with modified names like &ldquo;Tricky Dick,&rdquo;
+              which uses rhyming and affixation to convey negative meaning while
+              remaining memorable.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >Social media provides a more dynamic and creative dataset.
+              Platforms like Tiktok, Reddit, and Twitter (X) are especially rich
+              in nickname formation. Users often create names like &ldquo;Sleepy
+              Joe&rdquo; for Joe Biden or &ldquo;Florida Man,&rdquo; which rely
+              on rhythm, repetition, and cultural context. Rhyming constructions
+              like &ldquo;Slick Rick &ldquo;or &ldquo;Messy Jessie&rdquo; are
+              also common, showing how prosodic patterns enhance memorability.
+              These examples tend to spread quickly because they are easy to
+              recognize and replicate.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3"
+              >Personal and in-group examples show another layer of usage.
+              Within friend groups or classrooms, nicknames often rely on shared
+              experiences or inside jokes. As seen in Part 1, APMA 1200 becoming
+              &ldquo;CRAPMA Twelve-bun-dread&rdquo; shows multiple substitution
+              types, including blending (APMA &rarr; CRAPMA), vowel substitution
+              (hun &rarr; bun), and rhyming (drid &rarr; dread). Similarly,
+              names like &ldquo;Snack Zack&rdquo; or &ldquo;Lazy Daisy,&rdquo;
+              combine rhyming with semantic labeling, reinforcing both sound
+              similarity and descriptive meaning.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >Each example in our dataset was annotated based on four criteria:
+              the original and modified form, the type of substitution used, the
+              semantic meaning introduced, and the social context. This allowed
+              us to compare how different substitution strategies function
+              across settings. Several patterns emerged from this analysis.
+              First, simpler substitutions, especially onset changes and
+              rhyming, appear most frequently. These forms are easy to create
+              and recognize, making them effective in fast-paced environments
+              like social media. Second, more complex forms, like blends and
+              multi-layered substitutions, are less common but often perceived
+              as more creative or humorous. These tend to appear in closer
+              social groups where shared knowledge supports more elaborate
+              wordplay.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >Finally, context plays an important role in determining how a
+              nickname is interpreted. The same phonological structure can feel
+              affectionate, humorous, or insulting depending on who is using it
+              and why. This highlights that while phonological patterns provide
+              the structure for nickname formation, meaning is ultimately shaped
+              by social use.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3"
+              >Overall, this dataset demonstrates that nickname formation is not
+              random, but follows recognizable patterns that balance
+              phonological similarity, semantic meaning, and social context.
+              These findings provide the empirical foundation for both our
+              analysis and the design of our interactive nickname
+              generator.</span
+            >
+          </p>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <div class="section-heading">
+          <div>
+            <span class="sub-letter" style="background: var(--purple)">P</span
+            ><span class="sub-letter" style="background: var(--purple)">r</span
+            ><span class="sub-letter" style="background: var(--purple)">a</span
+            ><span class="sub-letter" style="background: var(--purple)">g</span
+            ><span class="sub-letter" style="background: var(--purple)">m</span
+            ><span class="sub-letter" style="background: var(--purple)">a</span
+            ><span class="sub-letter" style="background: var(--purple)">t</span
+            ><span class="sub-letter" style="background: var(--purple)">i</span
+            ><span class="sub-letter" style="background: var(--purple)">c</span
+            ><span class="sub-letter" style="background: var(--purple)">s</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--purple)">a</span
+            ><span class="sub-letter" style="background: var(--purple)">n</span
+            ><span class="sub-letter" style="background: var(--purple)">d</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--purple)">S</span
+            ><span class="sub-letter" style="background: var(--purple)">o</span
+            ><span class="sub-letter" style="background: var(--purple)">c</span
+            ><span class="sub-letter" style="background: var(--purple)">i</span
+            ><span class="sub-letter" style="background: var(--purple)">o</span
+            ><span class="sub-letter" style="background: var(--purple)">l</span
+            ><span class="sub-letter" style="background: var(--purple)">i</span
+            ><span class="sub-letter" style="background: var(--purple)">n</span
+            ><span class="sub-letter" style="background: var(--purple)">g</span
+            ><span class="sub-letter" style="background: var(--purple)">u</span
+            ><span class="sub-letter" style="background: var(--purple)">i</span
+            ><span class="sub-letter" style="background: var(--purple)">s</span
+            ><span class="sub-letter" style="background: var(--purple)">t</span
+            ><span class="sub-letter" style="background: var(--purple)">i</span
+            ><span class="sub-letter" style="background: var(--purple)">c</span
+            ><span class="sub-letter" style="background: var(--purple)">s</span>
+          </div>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >Phonological structure explains how nicknames like
+              &ldquo;Crook&rdquo; from &ldquo;Brook&rdquo; are constructed, but
+              it does not explain exactly why they land. Their success depends
+              on social context: shared knowledge, relationships between
+              speakers, and the direction of the critique.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3"
+              >The first of the criteria is shared knowledge the audience
+              already knows what is being referenced. The concept of common
+              ground captures this: speakers rely on information they assume is
+              shared.<sup><a href="#ftnt3" id="ftnt_ref3">3</a></sup>
+              &ldquo;Crook&rdquo; only works if the listener knows who Brook is
+              and understands the implication or context of the nickname.
+              Without it, the form does not read as clever, it just reads like a
+              different word. This pattern holds across the examples provided
+              earlier. In-group examples like &ldquo;CRAPMA 3-Shitty&rdquo;
+              depend on specific shared class experiences, while broader forms
+              like &ldquo;Tricky Dick&rdquo; rely on widely available cultural
+              knowledge.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >The second of the success criteria is the relationship between
+              the speakers and understanding that not everyone is privy to use
+              these forms. Playful renaming signals an in-group. Using a
+              nickname implies a closeness and familiarity with both the phrase
+              and the context, which means the same phrase can shift meaning
+              depending on who uses it. For example, if a close friend uses the
+              nickname, it would read as affiliative. However, if an outsider
+              uses the same phrase, it could feel presumptuous or cause
+              confusion. In both situations, the phonological structure stays
+              the same, but the interpretation does not. Therefore, social
+              position determines how the nickname is received.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3"
+              >The third and final success criteria of these nicknames is the
+              direction of the critique because many of these forms carry a
+              judgment, which brings in power. Dysphemism describes the use of
+              loaded substitutions. When the course &ldquo;APMA 0360&rdquo; is
+              renamed to &ldquo;CRAPMA 3-Shitty,&rdquo; the critique is directed
+              upward at the professor and the course material, which makes it
+              feel collective and justified.<sup
+                ><a href="#ftnt4" id="ftnt_ref4">4</a></sup
+              >
+              Political nicknames like &ldquo;Sleepy Joe&rdquo; operate
+              similarly, as critique is packaged into short, repeatable forms.
+              But when the same kind of renaming is directed toward someone with
+              less social power, or used in contexts where the target is not
+              present, it can lose some of its playful quality and take on a
+              more negative tone. The form stays the same, but the social
+              meaning shifts.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3"
+              >These forms are both playful and offensive, which is where face
+              theory comes in.<sup><a href="#ftnt5" id="ftnt_ref5">5</a></sup> A
+              modified name can affect both a positive face, wanting to be
+              liked, and a negative face, wanting control over how you are
+              represented.<sup><a href="#ftnt6" id="ftnt_ref6">6</a></sup> What
+              keeps it from going too far is indirection. Because the critique
+              is implied rather than stated outright and the nickname is similar
+              to the original name, it softens it. But if that balance is
+              missing and if there is no shared understanding or no relationship
+              to support it, the same nickname can easily feel like an
+              insult.</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0"
+              >Overall, playful renaming works both because it sounds right, and
+              because it is shaped by social context: it depends on shared
+              knowledge, relational context, and power. These constraints
+              determine whether a form is successful or not.</span
+            >
+          </p>
+        </div>
+      </div>
+      <div class="content-section">
+        <div class="section-heading">
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">U</span
+            ><span class="sub-letter" style="background: var(--teal)">s</span
+            ><span class="sub-letter" style="background: var(--teal)">i</span
+            ><span class="sub-letter" style="background: var(--teal)">n</span
+            ><span class="sub-letter" style="background: var(--teal)">g</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">O</span
+            ><span class="sub-letter" style="background: var(--teal)">u</span
+            ><span class="sub-letter" style="background: var(--teal)">r</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">R</span
+            ><span class="sub-letter" style="background: var(--teal)">e</span
+            ><span class="sub-letter" style="background: var(--teal)">s</span
+            ><span class="sub-letter" style="background: var(--teal)">e</span
+            ><span class="sub-letter" style="background: var(--teal)">a</span
+            ><span class="sub-letter" style="background: var(--teal)">r</span
+            ><span class="sub-letter" style="background: var(--teal)">c</span
+            ><span class="sub-letter" style="background: var(--teal)">h</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">t</span
+            ><span class="sub-letter" style="background: var(--teal)">o</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">M</span
+            ><span class="sub-letter" style="background: var(--teal)">a</span
+            ><span class="sub-letter" style="background: var(--teal)">k</span
+            ><span class="sub-letter" style="background: var(--teal)">e</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">a</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">N</span
+            ><span class="sub-letter" style="background: var(--teal)">i</span
+            ><span class="sub-letter" style="background: var(--teal)">c</span
+            ><span class="sub-letter" style="background: var(--teal)">k</span
+            ><span class="sub-letter" style="background: var(--teal)">n</span
+            ><span class="sub-letter" style="background: var(--teal)">a</span
+            ><span class="sub-letter" style="background: var(--teal)">m</span
+            ><span class="sub-letter" style="background: var(--teal)">i</span
+            ><span class="sub-letter" style="background: var(--teal)">n</span
+            ><span class="sub-letter" style="background: var(--teal)">g</span>
+          </div>
+          <div class="title-spacer"></div>
+          <div>
+            <span class="sub-letter" style="background: var(--teal)">T</span
+            ><span class="sub-letter" style="background: var(--teal)">o</span
+            ><span class="sub-letter" style="background: var(--teal)">o</span
+            ><span class="sub-letter" style="background: var(--teal)">l</span>
+          </div>
+        </div>
+
+        <div class="section-text">
+          <p class="c1">
+            <span class="c0">
+              As a continued exploration of nicknaming, we built a digital
+              Nicknamer. It is programmed with the linguistic constraints of
+              playful renaming by prioritizing phonological preservation. At its
+              core, the logic utilizes the CMU Pronouncing Dictionary to
+              identify rhyme tails, the sequence of phonemes from the primary
+              stressed vowel to the end of the word. By isolating these tails,
+              the Nicknamer ensures that the generated nickname retains the
+              prosodic skeleton of a target syllable, satisfying the structural
+              requirement that a nickname must "sound right" to be recognizable.
+            </span>
+          </p>
+        </div>
+
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3">
+              In instances where a direct rhyme is unavailable, the logic shifts
+              to nuclei matching. Here, the algorithm matches the target's vowel
+              phonemes (e.g., /IY1/ in "Brook") regardless of the surrounding
+              consonants. This computational flexibility mirrors the natural
+              linguistic tendency toward assonance in wordplay, where the "vibe"
+              of a sound is preserved even when the strict rhyme is broken,
+              sometimes called near rhyming. By allowing users to override these
+              sounds via the dropdown menu, the tool acknowledges that phonetic
+              interpretation is subjective and context-dependent.
+            </span>
+          </p>
+        </div>
+
+        <div class="section-text">
+          <p class="c1">
+            <span class="c3">
+              Ultimately, what the Nicknamer lacks is the human
+              intelligence/pragmatic competence to provide semantically distinct
+              substitutes. While it succeeds at finding nicknames that preserve
+              phonetical similarity, this is only one piece of the puzzle. Bear
+              this in mind when using the Nicknamer. It is programmed to provide
+              the structural "how" through rhyme and meter, but it is blind to
+              the common ground and power dynamics that constitute the "why". If
+              the results may provide the "dysphemistic" substitutions that
+              define in-group social bonding, it is purely by chance!
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="title-row" aria-label="The Nicknamifier">
+      <span class="title-letter">T</span><span class="title-letter">h</span
+      ><span class="title-letter">e</span>
+      <span
+        class="title-letter"
+        style="
+          background: transparent;
+          box-shadow: none;
+          width: 0.4em;
+          min-width: 0;
+        "
+      >
+      </span>
+      <span class="title-letter">N</span><span class="title-letter">i</span
+      ><span class="title-letter">c</span><span class="title-letter">k</span
+      ><span class="title-letter">n</span><span class="title-letter">a</span
+      ><span class="title-letter">m</span><span class="title-letter">e</span
+      ><span class="title-letter">r</span>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-row">
+      <input
+        id="nameInput"
+        placeholder="Type your name here…"
+        autocomplete="off"
+      />
+      <button class="big-btn" id="nicknamifyBtn">Nicknamify!</button>
+    </div>
+
+    <!-- PRONUNCIATION PANEL -->
+    <div class="pron-panel" id="pronunciationPanel">
+      <div class="pron-title">🔊 Pronunciation</div>
+      <div class="pron-sub">
+        Adjust how each part of your name sounds before we give you a nickname
+      </div>
+      <div id="pronunciationControls"></div>
+      <!-- <div class="pron-actions">
+        <button class="sec-btn" id="pronounceBtn" type="button">
+          ▶ Play my name
+        </button>
+      </div> -->
+    </div>
+
+    <!-- RESULT CARD -->
+    <div class="card" id="card">
+      <div class="card-label">✦ Your nickname ✦</div>
+      <div class="nickname-display" id="nicknameDisplay"></div>
+      <div class="definition" id="definition"></div>
+      <div class="example" id="example"></div>
+      <div class="card-actions">
+        <!-- <button class="sec-btn" id="listenAgainBtn" type="button">
+          🔊 Hear it again
+        </button> -->
+        <button
+          class="big-btn"
+          id="generateAgainBtn"
+          type="button"
+          style="font-size: 1rem; padding: 0.6rem 1.2rem"
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+
+    <!-- NO RESULT -->
+    <div class="no-result" id="noResult">
+      Couldn't find a rhyme for that one. Try a different name or adjust the
+      pronunciation!
+    </div>
+    <div class="content">
+      <!-- <div class="content-section"> -->
+      <div class="section-heading">
+        <div>
+          <span class="sub-letter" style="background: var(--red)">W</span
+          ><span class="sub-letter" style="background: var(--red)">o</span
+          ><span class="sub-letter" style="background: var(--red)">r</span
+          ><span class="sub-letter" style="background: var(--red)">k</span
+          ><span class="sub-letter" style="background: var(--red)">s</span>
+        </div>
+        <div class="title-spacer"></div>
+        <div class="title-spacer"></div>
+        <div>
+          <span class="sub-letter" style="background: var(--red)">C</span
+          ><span class="sub-letter" style="background: var(--red)">i</span
+          ><span class="sub-letter" style="background: var(--red)">t</span
+          ><span class="sub-letter" style="background: var(--red)">e</span
+          ><span class="sub-letter" style="background: var(--red)">d</span>
+        </div>
+      </div>
+      <div class="section-text">
+        <p class="c11">
+          <a href="#ftnt_ref1" id="ftnt1">[1]</a
+          ><span class="c10 c3"
+            >&nbsp;https://ecampusontario.pressbooks.pub/essentialsoflinguistics/chapter/3-4-syllable-structure/</span
+          >
+        </p>
+      </div>
+      <div class="section-text">
+        <p class="c11">
+          <a href="#ftnt_ref2" id="ftnt2">[2]</a
+          ><span class="c3 c10"
+            >&nbsp;https://www.jillshooktherapy.com/blog/minimal-pairs-and-how-to-use-them</span
+          >
+        </p>
+      </div>
+      <div class="section-text">
+        <p class="c11">
+          <a href="#ftnt_ref3" id="ftnt3">[3]</a
+          ><span class="c10 c3"
+            >&nbsp;https://semantics.uchicago.edu/kennedy/classes/f07/pragmatics/stalnaker02.pdf</span
+          >
+        </p>
+      </div>
+      <div class="section-text">
+        <p class="c11">
+          <a href="#ftnt_ref4" id="ftnt4">[4]</a
+          ><span class="c10 c3"
+            >&nbsp;https://www.academia.edu/59570521/Euphemism_and_Dysphemism_Language_Used_As_Shield_and_Weapon</span
+          >
+        </p>
+      </div>
+      <div class="section-text">
+        <p class="c11">
+          <a href="#ftnt_ref5" id="ftnt5">[5]</a
+          ><span class="c10 c3"
+            >&nbsp;https://web.stanford.edu/~eckert/PDF/GoffmanFace1967.pdf</span
+          >
+        </p>
+      </div>
+      <div class="section-text">
+        <p class="c11">
+          <a href="#ftnt_ref6" id="ftnt6">[6]</a><span class="c12">&nbsp;</span
+          ><span class="c10 c3"
+            >https://api.pageplace.de/preview/DT0400.9781107298859_A23760587/preview-9781107298859_A23760587.pdf</span
+          >
+        </p>
+      </div>
+      <!-- </div> -->
+    </div>
+    <div class="footer">The Nicknamer. Powered by rhyme &amp; whimsy.</div>
+
+    <script>
+      /* ═══════════════════════════════════════════
+         1. VOWEL DATA
+      ═══════════════════════════════════════════ */
+      const VOWEL_LABELS = {
+        SILENT: "silent (not pronounced)",
+        AA1: "aa as in father",
+        AE1: "a as in cat",
+        AH1: "uh as in fun",
+        AO1: "aw as in law",
+        AW1: "ow as in now",
+        AY1: "eye as in time",
+        EH1: "eh as in bed",
+        ER1: "er as in her",
+        EY1: "ay as in day",
+        IH1: "ih as in sit",
+        IY1: "ee as in see",
+        OW1: "oh as in go",
+        OY1: "oy as in boy",
+        UH1: "u as in put",
+        UW1: "oo as in moon",
+        YUW1: "yoo as in use",
+      };
+
+      /* ═══════════════════════════════════════════
+         2. DATA STATE
+      ═══════════════════════════════════════════ */
+      let WORDS = {},
+        RHYMES = {},
+        DEFINITIONS = {};
+      let dataLoaded = false;
+      let RHYME_TAILS = {};
+      let usedRhymeWords = new Set();
+
+      async function loadData() {
+        const fetchJSON = async (paths) => {
+          for (const path of paths) {
+            try {
+              const r = await fetch(path + "?v=" + Date.now());
+              if (r.ok) return await r.json();
+            } catch (e) {
+              console.warn("Failed:", path);
+            }
+          }
+          return {};
+        };
+        try {
+          WORDS = await fetchJSON(["data/words.json", "words.json"]);
+          RHYMES = await fetchJSON(["data/rhymes.json", "rhymes.json"]);
+          DEFINITIONS = await fetchJSON([
+            "data/definitions.json",
+            "definitions.json",
+          ]);
+        } finally {
+          buildRhymeTails();
+          dataLoaded = true;
+          console.log("Data loaded ✓", Object.keys(WORDS).length, "words");
+          updatePronunciationUI();
+        }
+      }
+      loadData();
+
+      function buildRhymeTails() {
+        RHYME_TAILS = {};
+        for (const [word, data] of Object.entries(WORDS)) {
+          // Support both {phonemes:[...]} and {entries:[[...],[...]]} formats
+          const phonemesList = data.entries ?? [data.phonemes];
+          for (const phones of phonemesList) {
+            if (!phones) continue;
+            // Index every vowel-to-end tail so rhyming works on any syllable
+            for (let i = 0; i < phones.length; i++) {
+              if (!/[012]$/.test(phones[i])) continue;
+              let end = i + 1;
+              while (end < phones.length && !/[012]$/.test(phones[end])) end++;
+              const tail = phones.slice(i, end).join(" ");
+              if (!RHYME_TAILS[tail]) RHYME_TAILS[tail] = [];
+              RHYME_TAILS[tail].push({ word, phonemes: phones });
+            }
+          }
+        }
+        console.log("Rhyme tails built:", Object.keys(RHYME_TAILS).length);
+      }
+
+      function getRhymeTailFromPhonemes(phonemes) {
+        const idx = phonemes.findIndex((p) => /[012]$/.test(p));
+        if (idx === -1) return null;
+        return phonemes.slice(idx).join(" ");
+      }
+
+      /* ═══════════════════════════════════════════
+         3. STRING HELPERS
+      ═══════════════════════════════════════════ */
+      const normalize = (w) => w.toLowerCase().replace(/[^a-z]/g, "");
+      const getNameParts = (name) => name.trim().split(/\s+/).filter(Boolean);
+      function capitalizeWord(word) {
+        if (!word) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      }
+
+      function guessVowel(syl) {
+        const s = syl.toLowerCase();
+        if (/(igh|y)$/.test(s)) return "AY1";
+        if (/(oi|oy)/.test(s)) return "OY1";
+        if (/(ee|ea|ie|ei|ey)/.test(s)) return "IY1";
+        if (/(oo|ou|ue|ew|u[aeiou])/.test(s)) return "UW1";
+        if (/(ow|au|aw)/.test(s)) return "AW1";
+        if (/(oa|oat|oe)/.test(s)) return "OW1";
+        if (/(ai|ay|ei)/.test(s)) return "EY1";
+        if (/(ar)/.test(s)) return "AA1";
+        if (/(or)/.test(s)) return "AO1";
+        if (/a/.test(s)) return "AE1";
+        if (/e/.test(s)) return "EH1";
+        if (/i/.test(s)) return "IH1";
+        if (/o/.test(s)) return "OW1";
+        return "AH1";
+      }
+
+      /* ═══════════════════════════════════════════
+         4. PHONEME UTILITIES
+      ═══════════════════════════════════════════ */
+      function getWordPhonemes(word) {
+        const clean = normalize(word);
+        const entry = WORDS[clean];
+        if (!entry) return null;
+        // words.json uses {phonemes:[...]} directly; entries array is a legacy fallback
+        return entry.phonemes ?? entry.entries?.[0] ?? null;
+      }
+
+      /**
+       * For words not in the dictionary, greedily segment left-to-right by finding
+       * the longest prefix that IS in the dictionary, then recurse on the remainder.
+       * Falls back to the regex splitter only for chunks with no dictionary match.
+       * e.g. "copeland" -> tries "copeland" (miss), "copeland"[0..7] ... "cope" (hit!)
+       *   -> then recurses on "land" (hit!) -> [cope-syls, land-syls]
+       */
+      function greedySyllableSplit(str) {
+        if (!str) return [];
+        for (let len = str.length; len >= 2; len--) {
+          const chunk = str.slice(0, len);
+          if (WORDS[chunk]) {
+            const entry = WORDS[chunk];
+            const phonemes = entry.phonemes;
+            const vowelIdxs = phonemes
+              .map((p, i) => (/[012]$/.test(p) ? i : -1))
+              .filter((i) => i >= 0);
+            const syls = vowelIdxs.map((vIdx, si) => {
+              const start = si === 0 ? 0 : vowelIdxs[si - 1] + 1;
+              const end =
+                vowelIdxs[si + 1] !== undefined
+                  ? vowelIdxs[si + 1]
+                  : phonemes.length;
+              const slice = phonemes.slice(start, end);
+              return {
+                text: chunk,
+                vowelCode: phonemes[vIdx],
+                phonemes: slice,
+              };
+            });
+            const rest = greedySyllableSplit(str.slice(len));
+            return [...syls, ...rest];
+          }
+        }
+        // No dictionary match for any prefix — fall back to regex on this chunk
+        const parts = str.match(
+          /[^aeiouy]*[aeiouy](?:[^aeiouy](?![aeiouy]))*/g,
+        ) || [str];
+        return parts.map((text) => ({
+          text,
+          vowelCode: guessVowel(text),
+          phonemes: [],
+        }));
+      }
+
+      function getSyllables(word) {
+        const clean = normalize(word);
+        const entry = WORDS[clean];
+
+        if (!dataLoaded || !entry?.phonemes) {
+          return greedySyllableSplit(clean);
+        }
+
+        const phonemes = entry.phonemes;
+        const vowelIdxs = phonemes
+          .map((p, i) => (/[012]$/.test(p) ? i : -1))
+          .filter((i) => i >= 0);
+
+        return vowelIdxs.map((vIdx, si) => {
+          const start = si === 0 ? 0 : vowelIdxs[si - 1] + 1;
+          const end =
+            vowelIdxs[si + 1] !== undefined
+              ? vowelIdxs[si + 1]
+              : phonemes.length;
+          const slice = phonemes.slice(start, end);
+          return {
+            text: slice.map((p) => p.replace(/[012]$/, "")).join(""),
+            vowelCode: phonemes[vIdx],
+            phonemes: slice,
+          };
+        });
+      }
+
+      /* ═══════════════════════════════════════════
+         5. CONSONANT PHONEME HELPER
+         
+         Extended mapping: handles ambiguous cases like c→s/k, g→g/j, etc.
+         This is used as a FALLBACK when we don't have dictionary phonemes.
+      ═══════════════════════════════════════════ */
+
+      // Build phonemes for a consonant cluster from a custom consonant-selector
+      // override map, or fall back to letter-by-letter guessing.
+      function consonantPhonemesFull(str, overrides = {}) {
+        // overrides: { "onset" | "coda" → phoneme string like "S" or "K" }
+        if (overrides.full) return [overrides.full];
+        const result = [];
+        let i = 0;
+        const s = str.toLowerCase();
+        while (i < s.length) {
+          // Digraphs first
+          const two = s.slice(i, i + 2);
+          const three = s.slice(i, i + 3);
+          if (three === "tch") {
+            result.push("CH");
+            i += 3;
+            continue;
+          }
+          if (three === "dge") {
+            result.push("JH");
+            i += 3;
+            continue;
+          }
+          if (two === "sh") {
+            result.push("SH");
+            i += 2;
+            continue;
+          }
+          if (two === "zh") {
+            result.push("ZH");
+            i += 2;
+            continue;
+          }
+          if (two === "ng") {
+            result.push("NG");
+            i += 2;
+            continue;
+          }
+          if (two === "ck") {
+            result.push("K");
+            i += 2;
+            continue;
+          }
+          if (two === "wh") {
+            result.push("W");
+            i += 2;
+            continue;
+          }
+          if (two === "qu") {
+            result.push("K", "W");
+            i += 2;
+            continue;
+          }
+          // Ambiguous digraphs — use overrides
+          if (two === "th") {
+            result.push(overrides.th ?? "TH");
+            i += 2;
+            continue;
+          }
+          if (two === "ch") {
+            result.push(overrides.ch ?? "CH");
+            i += 2;
+            continue;
+          }
+          if (two === "ph") {
+            result.push(overrides.ph ?? "F");
+            i += 2;
+            continue;
+          }
+          if (two === "gh") {
+            const g = overrides.gh;
+            if (g === "SILENT") {
+              i += 2;
+              continue;
+            }
+            result.push(g ?? "F");
+            i += 2;
+            continue;
+          }
+          if (two === "gn") {
+            result.push(overrides.gn ?? "N");
+            i += 2;
+            continue;
+          }
+          if (two === "kn") {
+            result.push("N");
+            i += 2;
+            continue;
+          }
+          if (two === "wr") {
+            result.push("R");
+            i += 2;
+            continue;
+          }
+          if (two === "mb") {
+            result.push("M");
+            i += 2;
+            continue;
+          } // climb, lamb
+          // Single ambiguous letters
+          const c = s[i];
+          if (c === "c") {
+            result.push(
+              overrides.c ??
+                (s[i + 1] === "e" || s[i + 1] === "i" || s[i + 1] === "y"
+                  ? "S"
+                  : "K"),
+            );
+            i++;
+            continue;
+          }
+          if (c === "g") {
+            result.push(
+              overrides.g ??
+                (s[i + 1] === "e" || s[i + 1] === "i" || s[i + 1] === "y"
+                  ? "JH"
+                  : "G"),
+            );
+            i++;
+            continue;
+          }
+          if (c === "s") {
+            result.push(overrides.s ?? "S");
+            i++;
+            continue;
+          }
+          if (c === "x") {
+            result.push("K", "S");
+            i++;
+            continue;
+          }
+          if (c === "j") {
+            result.push("JH");
+            i++;
+            continue;
+          }
+          // Standard mappings
+          const MAP = {
+            b: "B",
+            d: "D",
+            f: "F",
+            h: "HH",
+            k: "K",
+            l: "L",
+            m: "M",
+            n: "N",
+            p: "P",
+            q: "K",
+            r: "R",
+            t: "T",
+            v: "V",
+            w: "W",
+            y: "Y",
+            z: "Z",
+          };
+          if (MAP[c]) {
+            result.push(MAP[c]);
+            i++;
+            continue;
+          }
+          i++; // skip unknowns
+        }
+        return result;
+      }
+
+      /* ═══════════════════════════════════════════
+         5b. CONSONANT OVERRIDE HELPERS
+         
+         Read the consonant-selector dropdowns for a given syllable position.
+         Returns an overrides object for consonantPhonemesFull().
+      ═══════════════════════════════════════════ */
+      function getConsonantOverrides(pIndex, sIndex) {
+        const overrides = {};
+        // We look for all selects with id starting with cons-{pIndex}-{sIndex}-
+        const prefix = `cons-${pIndex}-${sIndex}-`;
+        document.querySelectorAll(`select[id^="${prefix}"]`).forEach((sel) => {
+          const key = sel.id.slice(prefix.length); // e.g. "onset-c", "coda-gh"
+          const parts = key.split("-");
+          // parts[0] = pos (onset|coda|word), parts[1] = ambig key (c, g, th, etc.)
+          const ambigKey = parts.slice(1).join("-"); // handles multi-segment keys
+          overrides[ambigKey] = sel.value; // e.g. overrides["c"] = "S"
+        });
+        return overrides;
+      }
+
+      /**
+       * Build CMU phoneme array for a single syllable, respecting all dropdowns.
+       */
+      function syllableToPhonemes(syl, vowelCode, pIndex, sIndex) {
+        // SILENT: emit only onset consonants
+        if (vowelCode === "SILENT") {
+          const onset = syl.text.replace(/[aeiouy]/gi, "");
+          const overrides = getConsonantOverrides(pIndex, sIndex);
+          return consonantPhonemesFull(onset, overrides);
+        }
+
+        // If vowel unchanged and we have authoritative phonemes from the dictionary, use them.
+        if (vowelCode === syl.vowelCode && syl.phonemes?.length) {
+          return syl.phonemes;
+        }
+
+        // Rebuild: split text into onset / coda, apply overrides
+        const overrides = getConsonantOverrides(pIndex, sIndex);
+        const m = syl.text.match(/^([^aeiouy]*)([aeiouy]*)([^aeiouy]*)$/i);
+        const onset = m?.[1] ?? "";
+        const coda = m?.[3] ?? "";
+        return [
+          ...consonantPhonemesFull(onset, overrides),
+          vowelCode,
+          ...consonantPhonemesFull(coda, overrides),
+        ].filter(Boolean);
+      }
+
+      /* ═══════════════════════════════════════════
+         6. TTS — BUILD PHONEME ARRAYS
+         
+         For nickname replacement words, ALWAYS prefer the dictionary phonemes
+         from words.json since those are authoritative CMU pronunciations.
+      ═══════════════════════════════════════════ */
+
+      /**
+       * Build a token list for speaking a name (or name part).
+       *
+       * Strategy per syllable:
+       *   - If the syllable came from a dictionary word → { type:"word", word } (Kokoro G2P)
+       *   - If reconstructed from user dropdowns → { type:"ipa", ipa, word } (inline IPA)
+       *
+       * This means dictionary words are ALWAYS spoken by Kokoro's own G2P, which is
+       * definitionally correct. Only truly unknown syllables fall back to our IPA mapping.
+       */
+      function buildNameTokens(parts) {
+        const tokens = [];
+        parts.forEach((part, pIndex) => {
+          const syls = getSyllables(part);
+          syls.forEach((syl, sIndex) => {
+            const sel = document.getElementById(`syl-${pIndex}-${sIndex}`);
+            const vowelCode = sel ? sel.value : syl.vowelCode;
+            const userChanged = sel && vowelCode !== syl.vowelCode;
+
+            if (
+              !userChanged &&
+              syl.phonemes?.length &&
+              WORDS[syl.text?.toLowerCase()]
+            ) {
+              // Syllable maps to a known dictionary word — let Kokoro pronounce it
+              tokens.push({ type: "word", word: syl.text });
+            } else {
+              // Unknown or user-modified — build IPA from our mapping
+              const phones = syllableToPhonemes(syl, vowelCode, pIndex, sIndex);
+              const ipa = phones
+                .map((p) => CMU_TO_IPA[p.replace(/[012]$/, "")] ?? "")
+                .join("");
+              tokens.push({ type: "ipa", ipa, word: syl.text || part });
+            }
+          });
+        });
+        return tokens;
+      }
+
+      /**
+       * Build tokens for a nickname.
+       * The swapped syllable → plain word token (Kokoro G2P, perfect quality).
+       * All other syllables → same logic as buildNameTokens.
+       */
+      function buildNicknameTokens(parts, target, rhymeWord) {
+        const tokens = [];
+        parts.forEach((part, pIndex) => {
+          const syls = getSyllables(part);
+          syls.forEach((syl, sIndex) => {
+            if (pIndex === target.pIndex && sIndex === target.sIdx) {
+              // The substituted rhyme word — always in the dictionary, let Kokoro say it
+              tokens.push({ type: "word", word: rhymeWord });
+              return;
+            }
+            const sel = document.getElementById(`syl-${pIndex}-${sIndex}`);
+            const vowelCode = sel ? sel.value : syl.vowelCode;
+            const userChanged = sel && vowelCode !== syl.vowelCode;
+
+            if (
+              !userChanged &&
+              syl.phonemes?.length &&
+              WORDS[syl.text?.toLowerCase()]
+            ) {
+              tokens.push({ type: "word", word: syl.text });
+            } else {
+              const phones = syllableToPhonemes(syl, vowelCode, pIndex, sIndex);
+              const ipa = phones
+                .map((p) => CMU_TO_IPA[p.replace(/[012]$/, "")] ?? "")
+                .join("");
+              tokens.push({ type: "ipa", ipa, word: syl.text || part });
+            }
+          });
+        });
+        return tokens;
+      }
+
+      let currentSpeakSpec = null;
+
+      function speakNickname(parts, target, rhymeWord) {
+        const tokens = buildNicknameTokens(parts, target, rhymeWord);
+        console.log("[TTS nickname] tokens:", tokens);
+        if (window.speakTokens) window.speakTokens(tokens);
+      }
+
+      function speakName(parts) {
+        const tokens = buildNameTokens(parts);
+        console.log("[TTS name] tokens:", tokens);
+        if (window.speakTokens) window.speakTokens(tokens);
+      }
+
+      /* ═══════════════════════════════════════════
+         7. RHYME CANDIDATE SELECTION
+      ═══════════════════════════════════════════ */
+      function pickCandidateByTail(tail, originalSyl, allowedSylCounts = [1]) {
+        const candidates = RHYME_TAILS[tail] || [];
+        const orig = normalize(originalSyl);
+        const tailPhones = tail.split(" ");
+
+        const good = candidates.filter(({ word, phonemes }) => {
+          if (word === orig || word.length < 3) return false;
+          const syllables = phonemes.filter((p) => /\d/.test(p)).length;
+          if (!allowedSylCounts.includes(syllables)) return false;
+          return phonemes.slice(-tailPhones.length).join(" ") === tail;
+        });
+
+        if (!good.length) return null;
+        const pick = good[Math.floor(Math.random() * good.length)];
+        usedRhymeWords.add(pick.word);
+        return pick;
+      }
+
+      function pickTwoSylForTwoTarget(part, sIdx) {
+        const clean = normalize(part);
+        if (!WORDS[clean]) return null;
+        const phonemes = WORDS[clean].phonemes;
+        const vowelIdxs = phonemes
+          .map((ph, i) => (/[012]$/.test(ph) ? i : -1))
+          .filter((i) => i >= 0);
+        if (sIdx + 1 >= vowelIdxs.length) return null;
+
+        const n1 = phonemes[vowelIdxs[sIdx]].replace(/[012]$/, "");
+        const n2 = phonemes[vowelIdxs[sIdx + 1]].replace(/[012]$/, "");
+
+        const candidates = Object.keys(WORDS).filter((w) => {
+          if (w === clean || w.length < 3) return false;
+          const ph = WORDS[w].phonemes;
+          const vIdxs = ph
+            .map((p, i) => (/[012]$/.test(p) ? i : -1))
+            .filter((i) => i >= 0);
+          if (vIdxs.length !== 2) return false;
+          return (
+            ph[vIdxs[0]].replace(/[012]$/, "") === n1 &&
+            ph[vIdxs[1]].replace(/[012]$/, "") === n2
+          );
+        });
+
+        if (!candidates.length) return null;
+        const shuffled = candidates.sort(() => Math.random() - 0.5);
+        const fresh = shuffled.filter((w) => !usedRhymeWords.has(w));
+        const pick = (fresh.length ? fresh : shuffled)[0];
+        usedRhymeWords.add(pick);
+        return pick;
+      }
+
+      /* ═══════════════════════════════════════════
+         8. MAIN GENERATE
+      ═══════════════════════════════════════════ */
+      function generate() {
+        const nameInput = document.getElementById("nameInput").value.trim();
+        const noResult = document.getElementById("noResult");
+        if (!nameInput || !dataLoaded) return;
+
+        noResult.style.display = "none";
+
+        const parts = getNameParts(nameInput).map(capitalizeWord);
+
+        let targets = [];
+        parts.forEach((part, pIndex) => {
+          getSyllables(part).forEach(({ text, vowelCode }, sIdx) => {
+            const sel = document.getElementById(`syl-${pIndex}-${sIdx}`);
+            targets.push({
+              type: "single",
+              pIndex,
+              sIdx,
+              vowelCode: sel ? sel.value : vowelCode,
+              oldSyl: text,
+            });
+          });
+        });
+        parts.forEach((part, pIndex) => {
+          const syls = getSyllables(part);
+          for (let sIdx = 0; sIdx + 1 < syls.length; sIdx++) {
+            targets.push({ type: "double", pIndex, sIdx });
+          }
+        });
+        targets.sort(() => Math.random() - 0.5);
+
+        let result = null;
+
+        for (const target of targets) {
+          if (target.vowelCode === "SILENT") continue;
+          if (target.type === "double") {
+            const candidate = pickTwoSylForTwoTarget(
+              parts[target.pIndex],
+              target.sIdx,
+            );
+            if (candidate) {
+              result = { target, rhymeWord: candidate, isDouble: true };
+              break;
+            }
+            continue;
+          }
+
+          if (/\(\d+\)$/.test(target.oldSyl)) continue;
+          const fullCleanPart = normalize(parts[target.pIndex]);
+          const cleanSyl = normalize(target.oldSyl);
+
+          let tail = null;
+          if (WORDS[fullCleanPart]) {
+            const phonemes = WORDS[fullCleanPart].phonemes;
+            const vowelIdxs = phonemes
+              .map((ph, i) => (/[012]$/.test(ph) ? i : -1))
+              .filter((i) => i >= 0);
+            if (target.sIdx < vowelIdxs.length) {
+              const start = vowelIdxs[target.sIdx];
+              let end = start + 1;
+              while (end < phonemes.length && !/[012]$/.test(phonemes[end]))
+                end++;
+              tail = phonemes.slice(start, end).join(" ");
+            } else {
+              tail = getRhymeTailFromPhonemes(phonemes);
+            }
+          } else if (WORDS[cleanSyl]) {
+            tail = getRhymeTailFromPhonemes(WORDS[cleanSyl].phonemes);
+          } else {
+            const guessedCode = target.vowelCode;
+            const coda = target.oldSyl
+              .toLowerCase()
+              .replace(/.*[aeiouy]/i, "")
+              .replace(/[^a-z]/g, "");
+            if (coda) {
+              tail =
+                Object.keys(RHYME_TAILS)
+                  .filter((t) => t.startsWith(guessedCode) && t !== guessedCode)
+                  .sort(
+                    (a, b) =>
+                      (RHYME_TAILS[b]?.length || 0) -
+                      (RHYME_TAILS[a]?.length || 0),
+                  )[0] || guessedCode;
+            } else {
+              tail = guessedCode;
+            }
+          }
+          if (!tail) continue;
+
+          const allowedSylCounts = target.sIdx === 0 ? [1, 2] : [1];
+          let pick = pickCandidateByTail(tail, target.oldSyl, allowedSylCounts);
+
+          if (pick) {
+            result = { target, rhymeWord: pick.word, isDouble: false };
+            break;
+          }
+
+          const nucleusTail = tail.split(" ")[0];
+          if (nucleusTail !== tail) {
+            const pick2 = pickCandidateByTail(
+              nucleusTail,
+              target.oldSyl,
+              allowedSylCounts,
+            );
+            if (pick2) {
+              result = { target, rhymeWord: pick2.word, isDouble: false };
+              break;
+            }
+          }
+        }
+
+        if (!result) {
+          noResult.style.display = "block";
+          document.getElementById("card").style.display = "none";
+          return;
+        }
+
+        const { target, rhymeWord, isDouble } = result;
+
+        const origSyls = getSyllables(parts[target.pIndex]).map((s) => s.text);
+        let swappedFrom = isDouble
+          ? `"${origSyls[target.sIdx]}" + "${origSyls[target.sIdx + 1]}"`
+          : `"${origSyls[target.sIdx]}"`;
+
+        let finalParts = [...parts];
+        const syllables = getSyllables(parts[target.pIndex]);
+        finalParts[target.pIndex] = capitalizeWord(
+          syllables
+            .map((s, i) => (i === target.sIdx ? rhymeWord : s.text || ""))
+            .join(""),
+        );
+
+        currentSpeakSpec = { parts, target, rhymeWord };
+
+        const display = document.getElementById("nicknameDisplay");
+        display.innerHTML = "";
+        let globalIndex = 0;
+        finalParts.forEach((word) => {
+          const wordDiv = document.createElement("div");
+          wordDiv.className = "nickname-word";
+          [...word].forEach((ch) => {
+            const span = document.createElement("span");
+            span.className = "nick-letter";
+            span.textContent = ch;
+            span.style.setProperty("--i", globalIndex++);
+            wordDiv.appendChild(span);
+          });
+          display.appendChild(wordDiv);
+        });
+
+        document.getElementById("definition").textContent =
+          `✏️ Swapped ${swappedFrom} → "${rhymeWord}"`;
+        document.getElementById("example").textContent =
+          DEFINITIONS[rhymeWord] || "A uniquely magnificent moniker.";
+
+        const card = document.getElementById("card");
+        card.style.display = "none";
+        void card.offsetWidth;
+        card.style.display = "block";
+
+        setTimeout(() => speakNickname(parts, target, rhymeWord), 400);
+      }
+
+      /* ═══════════════════════════════════════════
+         9. PRONUNCIATION UI
+         
+         EXPANDED: Now covers many more ambiguous consonant cases:
+         - c (s vs k), g (hard vs soft/j), s (s vs z), th, ch, ph, gh, gn, x
+         - Handles both onset and coda positions independently
+      ═══════════════════════════════════════════ */
+
+      /**
+       * Detect all consonant ambiguities in a syllable's onset and coda.
+       * Returns an array of { pos, ambigKey, label, options } objects.
+       * ambigKey becomes part of the select id: cons-{p}-{s}-{pos}-{ambigKey}
+       */
+      function detectConsonantAmbiguities(sylText) {
+        const m = sylText.match(/^([^aeiouy]*)([aeiouy]*)([^aeiouy]*)$/i);
+        if (!m) return [];
+        const onset = (m[1] || "").toLowerCase();
+        const coda = (m[3] || "").toLowerCase();
+        const results = [];
+
+        function check(cluster, pos) {
+          if (!cluster) return;
+
+          // --- Digraph checks (consume the whole cluster if it matches) ---
+          if (/^th/.test(cluster) || /th$/.test(cluster)) {
+            results.push({
+              pos,
+              ambigKey: "th",
+              label: `"th" in "${sylText}"`,
+              options: [
+                { value: "TH", label: "th as in thin (voiceless)" },
+                { value: "DH", label: "th as in the (voiced)" },
+              ],
+              defaultFn: () => "TH",
+            });
+          }
+          if (/^ch/.test(cluster)) {
+            results.push({
+              pos,
+              ambigKey: "ch",
+              label: `"ch" in "${sylText}"`,
+              options: [
+                { value: "CH", label: "ch as in chair" },
+                { value: "SH", label: "sh as in chef" },
+                { value: "K", label: "k as in chorus" },
+              ],
+              defaultFn: () => "CH",
+            });
+          }
+          if (/^ph/.test(cluster) || /ph$/.test(cluster)) {
+            results.push({
+              pos,
+              ambigKey: "ph",
+              label: `"ph" in "${sylText}"`,
+              options: [
+                { value: "F", label: "f as in phone" },
+                { value: "P", label: "p (silent h)" },
+              ],
+              defaultFn: () => "F",
+            });
+          }
+          if (/gh/.test(cluster)) {
+            results.push({
+              pos,
+              ambigKey: "gh",
+              label: `"gh" in "${sylText}"`,
+              options: [
+                { value: "F", label: "f as in laugh" },
+                { value: "SILENT", label: "silent as in through" },
+                { value: "G", label: "g as in ghost" },
+              ],
+              defaultFn: () => "F",
+            });
+          }
+          if (/^gn/.test(cluster)) {
+            results.push({
+              pos,
+              ambigKey: "gn",
+              label: `"gn" in "${sylText}"`,
+              options: [
+                { value: "N", label: "n as in gnome" },
+                { value: "G", label: "g (both sounds)" },
+              ],
+              defaultFn: () => "N",
+            });
+          }
+
+          // --- Single letter checks ---
+          // Only flag "c" if it's NOT part of a digraph we already handled
+          if (
+            /c/.test(cluster) &&
+            !/ch|ck/.test(cluster) &&
+            !/ph|gh/.test(cluster)
+          ) {
+            // Auto-detect: c before e/i/y → S, otherwise K
+            const nextChar = onset === cluster ? (m[2]?.[0] ?? "") : "";
+            const autoVal = /[eiy]/.test(nextChar) ? "S" : "K";
+            results.push({
+              pos,
+              ambigKey: "c",
+              label: `"c" in "${sylText}"`,
+              options: [
+                { value: "K", label: "k as in cat/cream" },
+                { value: "S", label: "s as in face/city" },
+              ],
+              defaultFn: () => autoVal,
+            });
+          }
+          if (/g/.test(cluster) && !/gh|ng|gn/.test(cluster)) {
+            const nextChar = onset === cluster ? (m[2]?.[0] ?? "") : "";
+            const autoVal = /[eiy]/.test(nextChar) ? "JH" : "G";
+            results.push({
+              pos,
+              ambigKey: "g",
+              label: `"g" in "${sylText}"`,
+              options: [
+                { value: "G", label: "g as in get/gift (hard)" },
+                { value: "JH", label: "j as in gem/giraffe (soft)" },
+              ],
+              defaultFn: () => autoVal,
+            });
+          }
+          // "s" in coda can be /z/ (e.g. "rose", "is") — offer choice
+          if (pos === "coda" && /s$/.test(cluster) && !/sh/.test(cluster)) {
+            results.push({
+              pos,
+              ambigKey: "s",
+              label: `"s" at end of "${sylText}"`,
+              options: [
+                { value: "S", label: "s as in bus" },
+                { value: "Z", label: "z as in rose" },
+              ],
+              defaultFn: () => "S",
+            });
+          }
+          // "x" in onset → KS vs Z (xylophone)
+          if (pos === "onset" && /^x/.test(cluster)) {
+            results.push({
+              pos,
+              ambigKey: "x",
+              label: `"x" in "${sylText}"`,
+              options: [
+                { value: "KS", label: "ks as in fox" },
+                { value: "Z", label: "z as in xylophone" },
+              ],
+              defaultFn: () => "KS",
+            });
+          }
+        }
+
+        check(onset, "onset");
+        check(coda, "coda");
+        return results;
+      }
+
+      function updatePronunciationUI() {
+        const panel = document.getElementById("pronunciationPanel");
+        const controls = document.getElementById("pronunciationControls");
+        const name = document.getElementById("nameInput").value.trim();
+        usedRhymeWords = new Set();
+
+        if (!name) {
+          panel.style.display = "none";
+          return;
+        }
+        panel.style.display = "block";
+        controls.innerHTML = "";
+
+        getNameParts(name).forEach((part, pIndex) => {
+          const syls = getSyllables(part);
+
+          // Only show a part-level label if there are multiple syllables
+          if (syls.length > 1) {
+            const lbl = document.createElement("div");
+            lbl.className = "pron-section-label";
+            lbl.textContent = capitalizeWord(part);
+            controls.appendChild(lbl);
+          }
+
+          syls.forEach(({ text, vowelCode }, sIndex) => {
+            /* ── Vowel row ── */
+            const row = document.createElement("div");
+            row.className = "pronunciation-row";
+            const label = document.createElement("label");
+            label.textContent =
+              syls.length === 1
+                ? `${capitalizeWord(part)} — vowel`
+                : `"${text}" — vowel`;
+            const select = document.createElement("select");
+            select.id = `syl-${pIndex}-${sIndex}`;
+            Object.keys(VOWEL_LABELS).forEach((key) => {
+              const opt = new Option(VOWEL_LABELS[key], key);
+              if (
+                key === vowelCode ||
+                (key === "SILENT" && vowelCode === undefined)
+              )
+                opt.selected = true;
+              select.add(opt);
+            });
+            row.appendChild(label);
+            row.appendChild(select);
+            controls.appendChild(row);
+
+            /* ── Consonant ambiguity rows ── */
+            const ambigs = detectConsonantAmbiguities(text);
+            ambigs.forEach(
+              ({ pos, ambigKey, label: aLabel, options, defaultFn }) => {
+                const cRow = document.createElement("div");
+                cRow.className = "pronunciation-row consonant-row";
+                const cLabel = document.createElement("label");
+                cLabel.textContent = aLabel;
+                const cSelect = document.createElement("select");
+                cSelect.id = `cons-${pIndex}-${sIndex}-${pos}-${ambigKey}`;
+                options.forEach(({ value, label: oLabel }) => {
+                  const opt = new Option(oLabel, value);
+                  if (value === defaultFn()) opt.selected = true;
+                  cSelect.add(opt);
+                });
+                cRow.appendChild(cLabel);
+                cRow.appendChild(cSelect);
+                controls.appendChild(cRow);
+              },
+            );
+          });
+        });
+      }
+
+      /* ═══════════════════════════════════════════
+         10. EVENT LISTENERS
+      ═══════════════════════════════════════════ */
+      document
+        .getElementById("nameInput")
+        .addEventListener("input", updatePronunciationUI);
+      document
+        .getElementById("nicknamifyBtn")
+        .addEventListener("click", generate);
+      document
+        .getElementById("generateAgainBtn")
+        .addEventListener("click", generate);
+      document.getElementById("nameInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") generate();
+      });
+
+      document.getElementById("pronounceBtn").addEventListener("click", () => {
+        const name = document.getElementById("nameInput").value.trim();
+        if (!name) return;
+        const parts = getNameParts(name).map(capitalizeWord);
+        speakName(parts);
+      });
+
+      document
+        .getElementById("listenAgainBtn")
+        .addEventListener("click", () => {
+          if (!currentSpeakSpec) return;
+          const { parts, target, rhymeWord } = currentSpeakSpec;
+          speakNickname(parts, target, rhymeWord);
+        });
+    </script>
+  </body>
+</html>
