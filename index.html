@@ -831,8 +831,6 @@
     <nav id="sidebar" aria-label="Page sections">
       <a class="sb-label" href="#nicknamer">The Nicknamer</a>
 
-      <!-- <a class="sb-label" href="#title-main">Linguistic Analysis</a> -->
-
       <div class="sb-label">Sections</div>
       <a class="sb-link section-link" href="#sec-mechanics"
         >Understanding the Mechanics</a
@@ -1845,15 +1843,6 @@
         .filter((x) => x.el);
 
       function updateActive() {
-        let best = null,
-          bestTop = Infinity;
-        anchors.forEach(({ el }) => {
-          const top = el.getBoundingClientRect().top;
-          if (top <= 80 && (bestTop === Infinity || top > bestTop - Infinity)) {
-            // pick the one whose top is closest to but still above 80px
-          }
-        });
-        // Find last section whose top is at or above 80px viewport mark
         let active = anchors[0];
         for (const entry of anchors) {
           const top = entry.el.getBoundingClientRect().top;
@@ -1989,6 +1978,18 @@
         return entry.phonemes ?? entry.entries?.[0] ?? null;
       }
 
+      /*
+       * greedySyllableSplit — split a string into syllable objects.
+       *
+       * FIX: Previously every syllable returned `text: chunk` (the whole
+       * matched word), so "piper" produced two syllables both with text
+       * "piper", and joining them after a swap gave "snipepiper".
+       *
+       * Now we compute a per-syllable character slice by finding the vowel
+       * letter positions inside `chunk` and slicing accordingly:
+       *   syllable 0 → chunk[0 .. nextVowelPos)   e.g. "pi"
+       *   syllable 1 → chunk[prevVowelPos+1 .. end]  e.g. "per"
+       */
       function greedySyllableSplit(str) {
         if (!str) return [];
         for (let len = str.length; len >= 2; len--) {
@@ -1999,6 +2000,27 @@
             const vowelIdxs = phonemes
               .map((p, i) => (/[012]$/.test(p) ? i : -1))
               .filter((i) => i >= 0);
+
+            // Collect the character-level positions of each vowel letter in chunk
+            const vowelLetterRe = /[aeiouy]/gi;
+            const vowelCharPositions = [];
+            let vm;
+            while ((vm = vowelLetterRe.exec(chunk)) !== null) {
+              vowelCharPositions.push(vm.index);
+            }
+
+            // Build per-syllable character slices
+            const sylTexts = vowelIdxs.map((_, si) => {
+              // This syllable starts just after the previous vowel letter (or at 0)
+              const prevEnd =
+                si === 0 ? 0 : (vowelCharPositions[si - 1] ?? 0) + 1;
+              // This syllable ends just before the next vowel letter (or at end of chunk)
+              const nextVPos = vowelCharPositions[si + 1];
+              const endPos =
+                nextVPos !== undefined ? nextVPos : chunk.length;
+              return chunk.slice(prevEnd, endPos) || chunk;
+            });
+
             const syls = vowelIdxs.map((vIdx, si) => {
               const start = si === 0 ? 0 : vowelIdxs[si - 1] + 1;
               const end =
@@ -2006,7 +2028,7 @@
                   ? vowelIdxs[si + 1]
                   : phonemes.length;
               return {
-                text: chunk,
+                text: sylTexts[si],        // ← FIX: per-syllable slice, not whole chunk
                 vowelCode: phonemes[vIdx],
                 phonemes: phonemes.slice(start, end),
               };
@@ -2029,10 +2051,15 @@
         const clean = normalize(word);
         const entry = WORDS[clean];
         if (!dataLoaded || !entry?.phonemes) return greedySyllableSplit(clean);
+
         const phonemes = entry.phonemes;
         const vowelIdxs = phonemes
           .map((p, i) => (/[012]$/.test(p) ? i : -1))
           .filter((i) => i >= 0);
+
+        // Use greedySyllableSplit to get real character-based text per syllable
+        const textSyls = greedySyllableSplit(clean);
+
         return vowelIdxs.map((vIdx, si) => {
           const start = si === 0 ? 0 : vowelIdxs[si - 1] + 1;
           const end =
@@ -2040,9 +2067,7 @@
               ? vowelIdxs[si + 1]
               : phonemes.length;
           return {
-            text: phonemes
-              .slice(start, end)
-              .map((p) => p.replace(/[012]$/, "")),
+            text: textSyls[si]?.text ?? clean,
             vowelCode: phonemes[vIdx],
             phonemes: phonemes.slice(start, end),
           };
@@ -2278,14 +2303,12 @@
         });
         if (!good.length) return null;
 
-        // Group by syllable count
         const bySylCount = {};
         good.forEach(({ word, phonemes }) => {
           const n = phonemes.filter((p) => /\d/.test(p)).length;
           (bySylCount[n] = bySylCount[n] || []).push({ word, phonemes });
         });
 
-        // Try longest groups first, preferring unused words
         const counts = Object.keys(bySylCount)
           .map(Number)
           .sort((a, b) => b - a);
@@ -2300,7 +2323,6 @@
           }
         }
 
-        // All candidates have been used — fall back to longest group, allow repeats
         const pool = bySylCount[counts[0]];
         const pick = pool[Math.floor(Math.random() * pool.length)];
         usedRhymeWords.add(pick.word);
@@ -2339,24 +2361,13 @@
 
       /* ══════════════════════════════════════
          8. MAIN GENERATE
-         
-         BUG FIX: When a syllable isn't in the dictionary, the old code
-         picked the most-populated rhyme tail starting with the guessed
-         vowel, completely ignoring the actual coda consonants. This let
-         "tif" (coda = F → tail should be "IH1 F") match "grill"
-         (tail = "IH1 L") because "IH1 L" happens to be more populated.
-
-         Fix: build a proper tail from vowel + guessed coda consonants,
-         so "tif" → "IH1 F" and only words like "cliff", "whiff", "sniff"
-         can match.
       ══════════════════════════════════════ */
       function buildGuessedTail(vowelCode, sylText) {
-        // Extract coda consonants (everything after the last vowel letter)
         const codaStr = sylText
           .toLowerCase()
           .replace(/.*[aeiouy]/i, "")
           .replace(/[^a-z]/g, "");
-        if (!codaStr) return vowelCode; // open syllable: tail is just the vowel
+        if (!codaStr) return vowelCode;
         const codaPhones = consonantPhonemesFull(codaStr);
         return [vowelCode, ...codaPhones].join(" ");
       }
@@ -2414,7 +2425,6 @@
           let tail = null;
 
           if (WORDS[fullCleanPart]) {
-            // Whole word is in dictionary — use authoritative phonemes
             const phonemes = WORDS[fullCleanPart].phonemes;
             const vowelIdxs = phonemes
               .map((ph, i) => (/[012]$/.test(ph) ? i : -1))
@@ -2429,14 +2439,8 @@
               tail = getRhymeTailFromPhonemes(phonemes);
             }
           } else if (WORDS[cleanSyl]) {
-            // Individual syllable is in dictionary
             tail = getRhymeTailFromPhonemes(WORDS[cleanSyl].phonemes);
           } else {
-            // ── FIX: build a proper tail from guessed vowel + guessed coda ──
-            // Old code: picked the most-populated tail starting with guessedCode,
-            //   ignoring actual coda consonants → mismatches like "tif" → "grill"
-            // New code: explicitly include coda consonant phonemes in the tail,
-            //   so "tif" (IH1 + F) → "IH1 F", which only matches "cliff", "sniff" etc.
             tail = buildGuessedTail(target.vowelCode, target.oldSyl);
           }
 
@@ -2451,9 +2455,6 @@
             break;
           }
 
-          // Nucleus-only fallback — ONLY for open syllables (no coda consonant)
-          // If tail has more than one phoneme it contains a coda, so nucleus-only
-          // would match unrelated words (e.g. "IH1" matching "grill", "will", etc.)
           const tailParts = tail.split(" ");
           const tailHasCoda = tailParts.length > 1;
           if (!tailHasCoda) {
@@ -2481,13 +2482,30 @@
           ? `"${origSyls[target.sIdx]}" + "${origSyls[target.sIdx + 1]}"`
           : `"${origSyls[target.sIdx]}"`;
 
+        /*
+         * FIX: Reconstruct the word by replacing only the target syllable(s)
+         * with the rhyme word, and keeping all other syllables' character text.
+         *
+         * Previously the code did:
+         *   syllables.map((s, i) => (i === target.sIdx ? rhymeWord : s.text || "")).join("")
+         * which for "piper" (syls: [{text:"piper"},{text:"piper"}]) produced
+         * "snipe" + "piper" = "snipepiper".
+         *
+         * Now each syllable has its own correct text slice ("pi", "per"),
+         * so the join correctly produces "snipe" + "" (sIdx=0 replaces "pi",
+         * sIdx=1 "per" is kept) — but we need to drop the replaced syllable(s).
+         *
+         * Strategy: replace sIdx (and sIdx+1 for double) with the rhyme word,
+         * set all other syllable slots to their text, then join.
+         */
         let finalParts = [...parts];
         const syllables = getSyllables(parts[target.pIndex]);
-        finalParts[target.pIndex] = capitalizeWord(
-          syllables
-            .map((s, i) => (i === target.sIdx ? rhymeWord : s.text || ""))
-            .join(""),
-        );
+        const newSylTexts = syllables.map((s, i) => {
+          if (i === target.sIdx) return rhymeWord;          // replace target
+          if (isDouble && i === target.sIdx + 1) return ""; // drop 2nd syl of double swap
+          return s.text || "";
+        });
+        finalParts[target.pIndex] = capitalizeWord(newSylTexts.join(""));
 
         currentSpeakSpec = { parts, target, rhymeWord };
 
@@ -2671,10 +2689,19 @@
             const row = document.createElement("div");
             row.className = "pronunciation-row";
             const label = document.createElement("label");
+            /*
+             * FIX: Previously both syllables of a multi-syllable word showed
+             * the same label (e.g. `"piper" — vowel` twice), making it
+             * impossible to tell which was which.
+             *
+             * Now single-syllable words show: "Piper — vowel"
+             * Multi-syllable words show:       "Piper, syllable 1 ("pi") — vowel"
+             *                                  "Piper, syllable 2 ("per") — vowel"
+             */
             label.textContent =
               syls.length === 1
                 ? `${capitalizeWord(part)} — vowel`
-                : `"${text}" — vowel`;
+                : `${capitalizeWord(part)}, syllable ${sIndex + 1} ("${text}") — vowel`;
             const select = document.createElement("select");
             select.id = `syl-${pIndex}-${sIndex}`;
             Object.keys(VOWEL_LABELS).forEach((key) => {
