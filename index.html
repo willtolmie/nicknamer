@@ -8,132 +8,6 @@
       href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <!-- <script type="module">
-      // 2. Import directly from the ESM build
-      import { KokoroTTS } from "https://cdn.jsdelivr.net/npm/kokoro-js@latest/dist/kokoro.web.js";
-
-      let tts = null;
-      let ttsLoading = false;
-
-      async function initTTS() {
-        if (tts || ttsLoading) return;
-        ttsLoading = true;
-
-        const btn = document.getElementById("nicknamifyBtn");
-        const orig = btn.textContent;
-        btn.textContent = "⏳ Loading voice…";
-        btn.disabled = true;
-
-        // Use the specific V1.0 repo to avoid the 401 Unauthorized error
-        const model_id = "onnx-community/Kokoro-82M-v1.0-ONNX";
-
-        try {
-          // NOTE: We use the imported KokoroTTS class directly
-          tts = await KokoroTTS.from_pretrained(model_id, {
-            dtype: "q8",
-            device: "wasm", // "wasm" is safest for compatibility; use "webgpu" for speed if supported
-          });
-          console.log("Kokoro TTS ready ✓");
-        } catch (e) {
-          console.error("Initialization failed:", e);
-        } finally {
-          btn.textContent = orig;
-          btn.disabled = false;
-          ttsLoading = false;
-        }
-      }
-
-      // Make sure your button listener is also inside this module
-      // or attached to the window so the HTML can see it
-      document
-        .getElementById("nicknamifyBtn")
-        .addEventListener("click", initTTS);
-
-      document.addEventListener("pointerdown", initTTS, { once: true });
-
-      const CMU_TO_IPA = {
-        AA: "ɑ",
-        AE: "a",
-        AH: "ʌ",
-        AO: "ɔ",
-        AW: "aʊ",
-        AY: "aɪ",
-        B: "b",
-        CH: "tʃ",
-        D: "d",
-        DH: "ð",
-        EH: "ɛ",
-        ER: "ɜr",
-        EY: "eɪ",
-        F: "f",
-        G: "ɡ",
-        HH: "h",
-        IH: "ɪ",
-        IY: "i",
-        JH: "dʒ",
-        K: "k",
-        L: "l",
-        M: "m",
-        N: "n",
-        NG: "ŋ",
-        OW: "oʊ",
-        OY: "ɔɪ",
-        P: "p",
-        R: "r",
-        S: "s",
-        SH: "ʃ",
-        T: "t",
-        TH: "θ",
-        UH: "ʊ",
-        UW: "u",
-        V: "v",
-        W: "w",
-        Y: "j",
-        Z: "z",
-        ZH: "ʒ",
-      };
-
-      function phonemesToIPA(phonemes) {
-        return phonemes
-          .map((p) => CMU_TO_IPA[p.replace(/[012]$/, "")] ?? "")
-          .join("");
-      }
-
-      /**
-       * Two-track TTS:
-       *   { type:"word", word:"cope" }      → plain text, Kokoro's own G2P (best quality)
-       *   { type:"ipa",  ipa:"...", word:"cope" } → inline [word](/ipa/) syntax
-       * This avoids our lossy CMU→IPA mapping for dictionary words.
-       */
-      window.speakTokens = async function (tokens) {
-        if (!tokens?.length) return;
-
-        const textParts = tokens.map((tok) => {
-          if (tok.type === "word") return tok.word;
-          // IPA inline syntax: [display text](/ipa/)
-          return `[${tok.word}](/${tok.ipa}/)`;
-        });
-        const text = textParts.join(" ");
-        console.log("[Kokoro] input:", text);
-
-        if (!tts) {
-          const words = tokens.map((t) => t.word ?? "").join(" ");
-          const utt = new SpeechSynthesisUtterance(words);
-          utt.lang = "en-US";
-          utt.rate = 0.85;
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(utt);
-          return;
-        }
-
-        const audio = await tts.generate(text, { voice: "af_heart" });
-        const blob = new Blob([audio.buffer], { type: "audio/wav" });
-        const url = URL.createObjectURL(blob);
-        const a = new Audio(url);
-        a.onended = () => URL.revokeObjectURL(url);
-        a.play();
-      };
-    </script> -->
     <style>
       :root {
         --red: #f9a8b8;
@@ -147,6 +21,7 @@
         --ink-mid: #5a5270;
         --card: #ffffff;
         --shadow: rgba(100, 80, 140, 0.1);
+        --sidebar-w: 220px;
       }
       *,
       *::before,
@@ -177,12 +52,84 @@
           );
         min-height: 100vh;
         display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+      }
+
+      /* ── SIDEBAR ── */
+      #sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        width: var(--sidebar-w);
+        min-width: var(--sidebar-w);
+        overflow-y: auto;
+        background: rgba(253, 246, 255, 0.92);
+        backdrop-filter: blur(8px);
+        border-right: 2px solid rgba(200, 180, 240, 0.25);
+        padding: 1.5rem 0.8rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        z-index: 100;
+      }
+      #sidebar .sb-label {
+        font-family: "Fredoka One", sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-mid);
+        opacity: 0.55;
+        padding: 0.8rem 0.5rem 0.3rem;
+        margin-top: 0.4rem;
+        text-decoration: none;
+      }
+      #sidebar .sb-label:first-child {
+        margin-top: 0;
+        padding-top: 0;
+      }
+      #sidebar a.sb-link {
+        display: block;
+        font-family: "Nunito", sans-serif;
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: var(--ink-mid);
+        text-decoration: none;
+        padding: 0.35rem 0.7rem;
+        border-radius: 10px;
+        transition:
+          background 0.15s,
+          color 0.15s;
+        line-height: 1.3;
+      }
+      #sidebar a.sb-link:hover,
+      #sidebar a.sb-link.active {
+        background: var(--purple);
+        color: var(--ink);
+      }
+      #sidebar a.sb-link.section-link {
+        font-size: 0.76rem;
+        font-weight: 600;
+        padding-left: 1.1rem;
+        opacity: 0.8;
+      }
+      #sidebar a.sb-link.section-link:hover,
+      #sidebar a.sb-link.section-link.active {
+        opacity: 1;
+        background: rgba(200, 180, 240, 0.35);
+      }
+
+      /* ── MAIN CONTENT ── */
+      #main {
+        flex: 1;
+        display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
         padding: 2rem 1rem 4rem;
         overflow-x: hidden;
+        min-width: 0;
       }
+
       ol {
         margin: 0;
         padding: 0;
@@ -340,6 +287,7 @@
         gap: 0;
         margin-bottom: 0.3rem;
         flex-wrap: wrap;
+        margin-bottom: 10px;
       }
       .title-letter {
         font-family: "Fredoka One", sans-serif;
@@ -452,11 +400,9 @@
         min-width: 0;
         background: transparent;
       }
-      .title-row {
-        margin-bottom: 10px;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+      .title-container {
+        /* margin-top: 3rem; */
+        /* margin-bottom: 2rem; */
       }
       .title-letter::before,
       .title-letter::after {
@@ -474,11 +420,18 @@
       .title-letter::after {
         right: 22%;
       }
+      .title-letter:hover {
+        animation: none;
+        transform: scale(1.25) rotate(-4deg);
+        z-index: 10;
+        transition: transform 0.15s;
+      }
+
       .author-box {
-        margin: 2.5rem 0 0 0;
+        margin: 2.5rem 0 3rem 0;
         text-align: center;
         background: var(--card);
-        padding: 0.5rem 1.5rem;
+        padding: 1rem 1rem;
         border-radius: 50px;
         box-shadow: 0 4px 15px var(--shadow);
         border: 2px solid var(--purple);
@@ -534,20 +487,6 @@
         75% {
           transform: rotate(-1deg) translateY(2px);
         }
-      }
-      .title-letter:hover {
-        animation: none;
-        transform: scale(1.25) rotate(-4deg);
-        z-index: 10;
-        transition: transform 0.15s;
-      }
-      .sub {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: var(--ink-mid);
-        letter-spacing: 0.04em;
-        margin-bottom: 2.2rem;
-        opacity: 0.85;
       }
 
       /* ── INPUT + BUTTON ── */
@@ -659,14 +598,12 @@
         font-size: 0.9rem;
         color: var(--ink);
       }
-      /* consonant rows get a slightly different border color */
       .pronunciation-row.consonant-row select {
         border-color: var(--orange);
       }
       .pronunciation-row.consonant-row label {
         color: #b07030;
       }
-
       .pron-section-label {
         font-size: 0.78rem;
         font-weight: 800;
@@ -676,11 +613,8 @@
         opacity: 0.6;
         margin: 0.8rem 0 0.3rem;
       }
-
       .content {
         justify-items: center;
-
-        margin-bottom: 1.5rem;
       }
       .pron-actions {
         margin-top: 0.6rem;
@@ -842,7 +776,6 @@
       .nick-letter::after {
         right: 22%;
       }
-
       .definition {
         font-size: 1.05rem;
         font-weight: 700;
@@ -886,20 +819,139 @@
         font-weight: 600;
         color: var(--ink-mid);
       }
+
+      /* ── SCROLL MARGIN FOR ANCHORS ── */
+      [id] {
+        scroll-margin-top: 1.5rem;
+      }
     </style>
   </head>
   <body>
-    <!-- TITLE -->
-    <div
-      class="title-container"
-      aria-label="Linguistic Analysis of Wordplay in Personalized Name-Calling and Nicknaming"
-    >
-      <div class="title-row">
-        <span class="title-letter">L</span><span class="title-letter">i</span
-        ><span class="title-letter">n</span><span class="title-letter">g</span
-        ><span class="title-letter">u</span><span class="title-letter">i</span
-        ><span class="title-letter">s</span><span class="title-letter">t</span
-        ><span class="title-letter">i</span><span class="title-letter">c</span>
+    <!-- ══ SIDEBAR ══ -->
+    <nav id="sidebar" aria-label="Page sections">
+      <a class="sb-label" href="#nicknamer">The Nicknamer</a>
+
+      <!-- <a class="sb-label" href="#title-main">Linguistic Analysis</a> -->
+
+      <div class="sb-label">Sections</div>
+      <a class="sb-link section-link" href="#sec-mechanics"
+        >Understanding the Mechanics</a
+      >
+      <a class="sb-link section-link" href="#sec-examples">Examples</a>
+      <a class="sb-link section-link" href="#sec-pragmatics"
+        >Pragmatics &amp; Sociolinguistics</a
+      >
+      <a class="sb-link section-link" href="#sec-tool">Using Our Research</a>
+
+      <a class="sb-label" href="#works-cited">Works Cited</a>
+    </nav>
+
+    <!-- ══ MAIN ══ -->
+    <div id="main">
+      <!-- TITLE -->
+      <div
+        id="title-main"
+        class="title-container"
+        aria-label="Linguistic Analysis of Wordplay in Personalized Name-Calling and Nicknaming"
+      >
+        <div class="title-row">
+          <span class="title-letter">L</span><span class="title-letter">i</span
+          ><span class="title-letter">n</span><span class="title-letter">g</span
+          ><span class="title-letter">u</span><span class="title-letter">i</span
+          ><span class="title-letter">s</span><span class="title-letter">t</span
+          ><span class="title-letter">i</span
+          ><span class="title-letter">c</span>
+          <span
+            class="title-letter"
+            style="
+              background: transparent;
+              box-shadow: none;
+              width: 0.4em;
+              min-width: 0;
+            "
+          >
+          </span>
+          <span class="title-letter">A</span><span class="title-letter">n</span
+          ><span class="title-letter">a</span><span class="title-letter">l</span
+          ><span class="title-letter">y</span><span class="title-letter">s</span
+          ><span class="title-letter">i</span
+          ><span class="title-letter">s</span>
+        </div>
+        <div class="title-row">
+          <span class="title-letter">o</span><span class="title-letter">f</span>
+          <span
+            class="title-letter"
+            style="
+              background: transparent;
+              box-shadow: none;
+              width: 0.4em;
+              min-width: 0;
+            "
+          >
+          </span>
+          <span class="title-letter">W</span><span class="title-letter">o</span
+          ><span class="title-letter">r</span><span class="title-letter">d</span
+          ><span class="title-letter">p</span><span class="title-letter">l</span
+          ><span class="title-letter">a</span
+          ><span class="title-letter">y</span>
+        </div>
+        <div class="title-row">
+          <span class="title-letter">i</span><span class="title-letter">n</span>
+          <span
+            class="title-letter"
+            style="
+              background: transparent;
+              box-shadow: none;
+              width: 0.4em;
+              min-width: 0;
+            "
+          >
+          </span>
+          <span class="title-letter">P</span><span class="title-letter">e</span
+          ><span class="title-letter">r</span><span class="title-letter">s</span
+          ><span class="title-letter">o</span><span class="title-letter">n</span
+          ><span class="title-letter">a</span><span class="title-letter">l</span
+          ><span class="title-letter">i</span><span class="title-letter">z</span
+          ><span class="title-letter">e</span
+          ><span class="title-letter">d</span>
+        </div>
+        <div class="title-row">
+          <span class="title-letter">N</span><span class="title-letter">a</span
+          ><span class="title-letter">m</span><span class="title-letter">e</span
+          ><span class="title-letter">-</span><span class="title-letter">C</span
+          ><span class="title-letter">a</span><span class="title-letter">l</span
+          ><span class="title-letter">l</span><span class="title-letter">i</span
+          ><span class="title-letter">n</span
+          ><span class="title-letter">g</span>
+        </div>
+        <div class="title-row">
+          <span class="title-letter">a</span><span class="title-letter">n</span
+          ><span class="title-letter">d</span>
+        </div>
+        <div class="title-row">
+          <span class="title-letter">N</span><span class="title-letter">i</span
+          ><span class="title-letter">c</span><span class="title-letter">k</span
+          ><span class="title-letter">n</span><span class="title-letter">a</span
+          ><span class="title-letter">m</span><span class="title-letter">i</span
+          ><span class="title-letter">n</span
+          ><span class="title-letter">g</span>
+        </div>
+      </div>
+      <div class="author-box">
+        <span class="author-name"
+          >By Copeland Block, Ellie Feig, Will Tolmie and Tiffany Tran</span
+        >
+      </div>
+
+      <!-- ── NICKNAMIFIER ── -->
+      <div
+        class="title-container"
+        id="nicknamer"
+        class="title-row"
+        aria-label="The Nicknamer"
+      >
+        <span class="title-letter">T</span><span class="title-letter">h</span
+        ><span class="title-letter">e</span>
         <span
           class="title-letter"
           style="
@@ -910,862 +962,912 @@
           "
         >
         </span>
-        <span class="title-letter">A</span><span class="title-letter">n</span
-        ><span class="title-letter">a</span><span class="title-letter">l</span
-        ><span class="title-letter">y</span><span class="title-letter">s</span
-        ><span class="title-letter">i</span><span class="title-letter">s</span>
-      </div>
-      <div class="title-row">
-        <span class="title-letter">o</span><span class="title-letter">f</span>
-        <span
-          class="title-letter"
-          style="
-            background: transparent;
-            box-shadow: none;
-            width: 0.4em;
-            min-width: 0;
-          "
-        >
-        </span>
-        <span class="title-letter">W</span><span class="title-letter">o</span
-        ><span class="title-letter">r</span><span class="title-letter">d</span
-        ><span class="title-letter">p</span><span class="title-letter">l</span
-        ><span class="title-letter">a</span><span class="title-letter">y</span>
-      </div>
-      <div class="title-row">
-        <span class="title-letter">i</span><span class="title-letter">n</span>
-        <span
-          class="title-letter"
-          style="
-            background: transparent;
-            box-shadow: none;
-            width: 0.4em;
-            min-width: 0;
-          "
-        >
-        </span>
-        <span class="title-letter">P</span><span class="title-letter">e</span
-        ><span class="title-letter">r</span><span class="title-letter">s</span
-        ><span class="title-letter">o</span><span class="title-letter">n</span
-        ><span class="title-letter">a</span><span class="title-letter">l</span
-        ><span class="title-letter">i</span><span class="title-letter">z</span
-        ><span class="title-letter">e</span><span class="title-letter">d</span>
-      </div>
-      <div class="title-row">
-        <span class="title-letter">N</span><span class="title-letter">a</span
-        ><span class="title-letter">m</span><span class="title-letter">e</span
-        ><span class="title-letter">-</span><span class="title-letter">C</span
-        ><span class="title-letter">a</span><span class="title-letter">l</span
-        ><span class="title-letter">l</span><span class="title-letter">i</span
-        ><span class="title-letter">n</span><span class="title-letter">g</span>
-      </div>
-      <div class="title-row">
-        <span class="title-letter">a</span><span class="title-letter">n</span
-        ><span class="title-letter">d</span>
-      </div>
-      <div class="title-row">
         <span class="title-letter">N</span><span class="title-letter">i</span
         ><span class="title-letter">c</span><span class="title-letter">k</span
         ><span class="title-letter">n</span><span class="title-letter">a</span
-        ><span class="title-letter">m</span><span class="title-letter">i</span
-        ><span class="title-letter">n</span><span class="title-letter">g</span>
+        ><span class="title-letter">m</span><span class="title-letter">e</span
+        ><span class="title-letter">r</span>
       </div>
-    </div>
-    <div class="author-box">
-      <span class="author-name"
-        >By Copeland Block, Ellie Feig, Will Tolmie and Tiffany Tran</span
-      >
-    </div>
-    <div class="content">
-      <div class="content-section">
-        <div class="section-heading">
-          <div>
-            <span class="sub-letter" style="background: var(--orange)">U</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">d</span
-            ><span class="sub-letter" style="background: var(--orange)">e</span
-            ><span class="sub-letter" style="background: var(--orange)">r</span
-            ><span class="sub-letter" style="background: var(--orange)">s</span
-            ><span class="sub-letter" style="background: var(--orange)">t</span
-            ><span class="sub-letter" style="background: var(--orange)">a</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">d</span
-            ><span class="sub-letter" style="background: var(--orange)">i</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">g</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--orange)">t</span
-            ><span class="sub-letter" style="background: var(--orange)">h</span
-            ><span class="sub-letter" style="background: var(--orange)">e</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--orange)">M</span
-            ><span class="sub-letter" style="background: var(--orange)">e</span
-            ><span class="sub-letter" style="background: var(--orange)">c</span
-            ><span class="sub-letter" style="background: var(--orange)">h</span
-            ><span class="sub-letter" style="background: var(--orange)">a</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">i</span
-            ><span class="sub-letter" style="background: var(--orange)">c</span
-            ><span class="sub-letter" style="background: var(--orange)">s</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--orange)">b</span
-            ><span class="sub-letter" style="background: var(--orange)">e</span
-            ><span class="sub-letter" style="background: var(--orange)">h</span
-            ><span class="sub-letter" style="background: var(--orange)">i</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">d</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--orange)">N</span
-            ><span class="sub-letter" style="background: var(--orange)">i</span
-            ><span class="sub-letter" style="background: var(--orange)">c</span
-            ><span class="sub-letter" style="background: var(--orange)">k</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">a</span
-            ><span class="sub-letter" style="background: var(--orange)">m</span
-            ><span class="sub-letter" style="background: var(--orange)">e</span
-            ><span class="sub-letter" style="background: var(--orange)">s</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--orange)">a</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">d</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--orange)">N</span
-            ><span class="sub-letter" style="background: var(--orange)">a</span
-            ><span class="sub-letter" style="background: var(--orange)">m</span
-            ><span class="sub-letter" style="background: var(--orange)">e</span
-            ><span class="sub-letter" style="background: var(--orange)">c</span
-            ><span class="sub-letter" style="background: var(--orange)">a</span
-            ><span class="sub-letter" style="background: var(--orange)">l</span
-            ><span class="sub-letter" style="background: var(--orange)">l</span
-            ><span class="sub-letter" style="background: var(--orange)">i</span
-            ><span class="sub-letter" style="background: var(--orange)">n</span
-            ><span class="sub-letter" style="background: var(--orange)">g</span>
-          </div>
+
+      <div class="input-row">
+        <input
+          id="nameInput"
+          placeholder="Type your name here…"
+          autocomplete="off"
+        />
+        <button class="big-btn" id="nicknamifyBtn">Nicknamify!</button>
+      </div>
+
+      <div class="pron-panel" id="pronunciationPanel">
+        <div class="pron-title">🔊 Pronunciation</div>
+        <div class="pron-sub">
+          Adjust how each part of your name sounds before we give you a nickname
         </div>
-        <div class="section-text">
-          <p class="c17">
-            <span class="c0"
-              >Nicknames are a part of everyday life. We use them to connect
-              with friends and family, show friendliness to our coworkers, and
-              signal closeness. Beyond interactions with other people, we also
-              frequently modify the names of events, places, courses, and other
-              aspects of our lives. Wordplay, as it's known, presents itself
-              commonly in games and puzzles, conversational humor, and
-              broad-based media. Much of it feels clever and funny because it
-              depends on a recognizable connection between the original form and
-              the modified one. When people understand the reasoning behind
-              these modifications, wordplay can create a sense of shared
-              knowledge. Several linguistic aspects, including substitution,
-              minimal pairs, and periodic preservation make for effective puns,
-              nicknames, and name calling.</span
-            >
-          </p>
+        <div id="pronunciationControls"></div>
+      </div>
+
+      <div class="card" id="card">
+        <div class="card-label">✦ Your nickname ✦</div>
+        <div class="nickname-display" id="nicknameDisplay"></div>
+        <div class="definition" id="definition"></div>
+        <div class="example" id="example"></div>
+        <div class="card-actions">
+          <button
+            class="big-btn"
+            id="generateAgainBtn"
+            type="button"
+            style="font-size: 1rem; padding: 0.6rem 1.2rem"
+          >
+            Try again
+          </button>
         </div>
-        <div class="section-text">
-          <p class="c17">
-            <span class="c3"
-              >In its simplest form, substitution refers to replacing a word, or
-              part of a word, with another sound or linguistic element. Many
-              nicknames and puns are created using different forms of
-              substitution, like onset (<span class="c9">Br</span>ook &rarr;
-              <span class="c9">Cr</span>ook), vowel (B<span class="c9">e</span>n
-              &rarr; B<span class="c9">u</span>n), coda (Ma<span class="c9"
-                >tt</span
+      </div>
+
+      <div class="no-result" id="noResult">
+        Couldn't find a rhyme for that one. Try a different name or adjust the
+        pronunciation!
+      </div>
+
+      <div class="content">
+        <!-- ── SECTION 1 ── -->
+        <div id="sec-mechanics" class="content-section">
+          <div class="section-heading">
+            <div>
+              <span class="sub-letter" style="background: var(--orange)">U</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >d</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >e</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >r</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >s</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >t</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >a</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >d</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >g</span
               >
-              &rarr; Ma<span class="c9">d</span>), blend/portmanteau (APMA 0360
-              &rarr; CRAPMA 3-Shitty), or affixation substitution (Shell &rarr;
-              Shelly).<sup><a href="#ftnt1" id="ftnt_ref1">1</a></sup>
-              Generally, the more layered the substitution is, such as combining
-              multiple substitution types, the more satisfying the pun feels.
-              For example, APMA 0360 &rarr; CRAPMA 3-Shitty works through
-              multiple overlapping and rhyming effects, while Ben &rarr; Bun
-              uses just one vowel change.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <table class="c24">
-            <tr class="c2">
-              <td class="c5">
-                <p class="c15">
-                  <span class="c18 c16">Substitution Type</span>
-                </p>
-              </td>
-              <td class="c21">
-                <p class="c15"><span class="c16 c18">Definition</span></p>
-              </td>
-              <td class="c8">
-                <p class="c15"><span class="c16">Example</span></p>
-              </td>
-            </tr>
-            <tr class="c2">
-              <td class="c5">
-                <p class="c15"><span class="c4 c3">Onset</span></p>
-              </td>
-              <td class="c21">
-                <p class="c14">
-                  <span class="c0">Changing the first consonant sound</span>
-                </p>
-              </td>
-              <td class="c8">
-                <p class="c14"><span class="c0">Brook &rarr; Crook</span></p>
-              </td>
-            </tr>
-            <tr class="c2">
-              <td class="c5">
-                <p class="c15"><span class="c4 c3">Coda</span></p>
-              </td>
-              <td class="c21">
-                <p class="c14">
-                  <span class="c0">Changing final consonant sound</span>
-                </p>
-              </td>
-              <td class="c8">
-                <p class="c14"><span class="c0">Matt &rarr; Mad</span></p>
-              </td>
-            </tr>
-            <tr class="c2">
-              <td class="c5">
-                <p class="c15"><span class="c4 c3">Vowel</span></p>
-              </td>
-              <td class="c21">
-                <p class="c14">
-                  <span class="c0">Changing only the vowel sound</span>
-                </p>
-              </td>
-              <td class="c8">
-                <p class="c14"><span class="c0">Ben &rarr; Bun</span></p>
-              </td>
-            </tr>
-            <tr class="c2">
-              <td class="c5">
-                <p class="c15"><span class="c4 c3">Blend/Portmanteau</span></p>
-              </td>
-              <td class="c21">
-                <p class="c14">
-                  <span class="c0"
-                    >Combining original name with a meaningful word</span
-                  >
-                </p>
-              </td>
-              <td class="c8">
-                <p class="c14">
-                  <span class="c0">APMA + crap &rarr; CRAPMA</span>
-                </p>
-              </td>
-            </tr>
-            <tr class="c2">
-              <td class="c5">
-                <p class="c15"><span class="c4 c3">Affixation</span></p>
-              </td>
-              <td class="c21">
-                <p class="c14">
-                  <span class="c0"
-                    >Adding a prefix or suffix to the original word</span
-                  >
-                </p>
-              </td>
-              <td class="c8">
-                <p class="c14"><span class="c0">Shell &rarr; Shelly</span></p>
-              </td>
-            </tr>
-            <tr class="c2">
-              <td class="c5">
-                <p class="c15"><span class="c3 c4">Rhyming</span></p>
-              </td>
-              <td class="c21">
-                <p class="c14">
-                  <span class="c0"
-                    >Adding or changing material so the new form rhymes with the
-                    original</span
-                  >
-                </p>
-              </td>
-              <td class="c8">
-                <p class="c14">
-                  <span class="c0">Trump &rarr; Dump Trump</span>
-                </p>
-              </td>
-            </tr>
-          </table>
-        </div>
-        <div class="section-text">
-          <p class="c17">
-            <span class="c3"
-              >Many forms of substitution are also minimal pairs&ndash;words
-              that are identical in all sounds but one (e.g. got vs get).<sup
-                ><a href="#ftnt2" id="ftnt_ref2">2</a></sup
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--orange)">t</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >h</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >e</span
               >
-              Minimal pairs are the foundation of creating worthwhile nicknames,
-              and having an understanding of how different pairs interact with
-              each other can help create more complex forms. For example, APMA
-              1200 can be broken into several phoneme pairs: APMA: APP - muh,
-              1200: TWELV HUN-drid, and can be altered to exhibit several
-              qualities of the class: APMA 1200 &rarr; CRAPMA Twelve-bun-dread.
-              The modification makes use of different minimal pairs (apma &rarr;
-              crapma, hun &rarr; bun, drid &rarr; dread) while keeping an
-              identifying piece of the original form (twelve). Prosody
-              preservation maintains the rhythm and emotion behind original
-              speech and is necessary for the audience to understand the pun.
-              For example, when a word has a distinctive stress pattern, an
-              effective modification would attempt to preserve that prosody. For
-              example, Beyonc&eacute; &rarr; Beyon-slay works because it keeps
-              the rhythm and stress pattern of the original name intact. By
-              contrast, Beyonc&eacute; &rarr; Queen-onc&eacute; feels less
-              natural. Although <span class="c6">Bey</span> and
-              <span class="c6">Queen</span> are both one syllable, they are not
-              prosodically equivalent. <span class="c6">Queen</span> ends with
-              an /n/ sound, making the syllable feel closed and heavier: queen =
-              /kwi:n/. <span class="c6">Bey</span>, By contrast, is open and
-              lighter: bey = /be&#618;/.</span
-            >
-          </p>
-        </div>
-      </div>
-
-      <div class="content-section">
-        <div class="section-heading">
-          <div>
-            <span class="sub-letter" style="background: var(--blue)">E</span
-            ><span class="sub-letter" style="background: var(--blue)">x</span
-            ><span class="sub-letter" style="background: var(--blue)">a</span
-            ><span class="sub-letter" style="background: var(--blue)">m</span
-            ><span class="sub-letter" style="background: var(--blue)">p</span
-            ><span class="sub-letter" style="background: var(--blue)">l</span
-            ><span class="sub-letter" style="background: var(--blue)">e</span
-            ><span class="sub-letter" style="background: var(--blue)">s</span>
-          </div>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >To better understand how phonological substitution works in real
-              contexts, we have compiled a number of nickname and wordplay
-              examples from three primary sources: historical and literary
-              texts, social media platforms, and personal interactions. This
-              range will let us capture both long-standing traditions of
-              wordplay and also more contemporary or rapidly evolving
-              forms.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c3"
-              >From historical and literary sources, we see that playful
-              renaming has deep roots. For example, William Shakespeare often
-              used puns based on sound similarity, often relying on rhyming and
-              minimal pair structures. One well-known instance comes from
-              <span class="c6">Romeo and Juliet</span>, where Mercutio puns on
-              the word &ldquo;grave.&rdquo; As he dies, he says &ldquo;ask for
-              me tomorrow, and you shall find me a grave man.&rdquo; Grave here
-              means &ldquo;serious&rdquo; and &ldquo;dead/buried.&rdquo; The
-              humor comes from the phonological identity of the words paired
-              with two different meanings. Just a fun note &ndash;
-              <span class="c6">Gnomeo and Juliet</span>, the animated adaptation
-              of <span class="c6">Romeo and Juliet</span> with gnomes, is
-              another example of play on words. The name Romeo is transformed
-              into <span class="c6">Gnomeo</span> through onset substitution.
-              This pun keeps the original phonological structure while
-              introducing a new semantic element, making the reference
-              immediately recognizable and humorous.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >Moreover, in political contexts, nicknames have long been used to
-              convey critique or satire. For example, figures like Richard Nixon
-              were labeled with modified names like &ldquo;Tricky Dick,&rdquo;
-              which uses rhyming and affixation to convey negative meaning while
-              remaining memorable.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >Social media provides a more dynamic and creative dataset.
-              Platforms like Tiktok, Reddit, and Twitter (X) are especially rich
-              in nickname formation. Users often create names like &ldquo;Sleepy
-              Joe&rdquo; for Joe Biden or &ldquo;Florida Man,&rdquo; which rely
-              on rhythm, repetition, and cultural context. Rhyming constructions
-              like &ldquo;Slick Rick &ldquo;or &ldquo;Messy Jessie&rdquo; are
-              also common, showing how prosodic patterns enhance memorability.
-              These examples tend to spread quickly because they are easy to
-              recognize and replicate.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c3"
-              >Personal and in-group examples show another layer of usage.
-              Within friend groups or classrooms, nicknames often rely on shared
-              experiences or inside jokes. As seen in Part 1, APMA 1200 becoming
-              &ldquo;CRAPMA Twelve-bun-dread&rdquo; shows multiple substitution
-              types, including blending (APMA &rarr; CRAPMA), vowel substitution
-              (hun &rarr; bun), and rhyming (drid &rarr; dread). Similarly,
-              names like &ldquo;Snack Zack&rdquo; or &ldquo;Lazy Daisy,&rdquo;
-              combine rhyming with semantic labeling, reinforcing both sound
-              similarity and descriptive meaning.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >Each example in our dataset was annotated based on four criteria:
-              the original and modified form, the type of substitution used, the
-              semantic meaning introduced, and the social context. This allowed
-              us to compare how different substitution strategies function
-              across settings. Several patterns emerged from this analysis.
-              First, simpler substitutions, especially onset changes and
-              rhyming, appear most frequently. These forms are easy to create
-              and recognize, making them effective in fast-paced environments
-              like social media. Second, more complex forms, like blends and
-              multi-layered substitutions, are less common but often perceived
-              as more creative or humorous. These tend to appear in closer
-              social groups where shared knowledge supports more elaborate
-              wordplay.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >Finally, context plays an important role in determining how a
-              nickname is interpreted. The same phonological structure can feel
-              affectionate, humorous, or insulting depending on who is using it
-              and why. This highlights that while phonological patterns provide
-              the structure for nickname formation, meaning is ultimately shaped
-              by social use.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c3"
-              >Overall, this dataset demonstrates that nickname formation is not
-              random, but follows recognizable patterns that balance
-              phonological similarity, semantic meaning, and social context.
-              These findings provide the empirical foundation for both our
-              analysis and the design of our interactive nickname
-              generator.</span
-            >
-          </p>
-        </div>
-      </div>
-
-      <div class="content-section">
-        <div class="section-heading">
-          <div>
-            <span class="sub-letter" style="background: var(--purple)">P</span
-            ><span class="sub-letter" style="background: var(--purple)">r</span
-            ><span class="sub-letter" style="background: var(--purple)">a</span
-            ><span class="sub-letter" style="background: var(--purple)">g</span
-            ><span class="sub-letter" style="background: var(--purple)">m</span
-            ><span class="sub-letter" style="background: var(--purple)">a</span
-            ><span class="sub-letter" style="background: var(--purple)">t</span
-            ><span class="sub-letter" style="background: var(--purple)">i</span
-            ><span class="sub-letter" style="background: var(--purple)">c</span
-            ><span class="sub-letter" style="background: var(--purple)">s</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--purple)">a</span
-            ><span class="sub-letter" style="background: var(--purple)">n</span
-            ><span class="sub-letter" style="background: var(--purple)">d</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--purple)">S</span
-            ><span class="sub-letter" style="background: var(--purple)">o</span
-            ><span class="sub-letter" style="background: var(--purple)">c</span
-            ><span class="sub-letter" style="background: var(--purple)">i</span
-            ><span class="sub-letter" style="background: var(--purple)">o</span
-            ><span class="sub-letter" style="background: var(--purple)">l</span
-            ><span class="sub-letter" style="background: var(--purple)">i</span
-            ><span class="sub-letter" style="background: var(--purple)">n</span
-            ><span class="sub-letter" style="background: var(--purple)">g</span
-            ><span class="sub-letter" style="background: var(--purple)">u</span
-            ><span class="sub-letter" style="background: var(--purple)">i</span
-            ><span class="sub-letter" style="background: var(--purple)">s</span
-            ><span class="sub-letter" style="background: var(--purple)">t</span
-            ><span class="sub-letter" style="background: var(--purple)">i</span
-            ><span class="sub-letter" style="background: var(--purple)">c</span
-            ><span class="sub-letter" style="background: var(--purple)">s</span>
-          </div>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >Phonological structure explains how nicknames like
-              &ldquo;Crook&rdquo; from &ldquo;Brook&rdquo; are constructed, but
-              it does not explain exactly why they land. Their success depends
-              on social context: shared knowledge, relationships between
-              speakers, and the direction of the critique.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c3"
-              >The first of the criteria is shared knowledge the audience
-              already knows what is being referenced. The concept of common
-              ground captures this: speakers rely on information they assume is
-              shared.<sup><a href="#ftnt3" id="ftnt_ref3">3</a></sup>
-              &ldquo;Crook&rdquo; only works if the listener knows who Brook is
-              and understands the implication or context of the nickname.
-              Without it, the form does not read as clever, it just reads like a
-              different word. This pattern holds across the examples provided
-              earlier. In-group examples like &ldquo;CRAPMA 3-Shitty&rdquo;
-              depend on specific shared class experiences, while broader forms
-              like &ldquo;Tricky Dick&rdquo; rely on widely available cultural
-              knowledge.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >The second of the success criteria is the relationship between
-              the speakers and understanding that not everyone is privy to use
-              these forms. Playful renaming signals an in-group. Using a
-              nickname implies a closeness and familiarity with both the phrase
-              and the context, which means the same phrase can shift meaning
-              depending on who uses it. For example, if a close friend uses the
-              nickname, it would read as affiliative. However, if an outsider
-              uses the same phrase, it could feel presumptuous or cause
-              confusion. In both situations, the phonological structure stays
-              the same, but the interpretation does not. Therefore, social
-              position determines how the nickname is received.</span
-            >
-          </p>
-        </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c3"
-              >The third and final success criteria of these nicknames is the
-              direction of the critique because many of these forms carry a
-              judgment, which brings in power. Dysphemism describes the use of
-              loaded substitutions. When the course &ldquo;APMA 0360&rdquo; is
-              renamed to &ldquo;CRAPMA 3-Shitty,&rdquo; the critique is directed
-              upward at the professor and the course material, which makes it
-              feel collective and justified.<sup
-                ><a href="#ftnt4" id="ftnt_ref4">4</a></sup
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--orange)">M</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >e</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >c</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >h</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >a</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >c</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >s</span
               >
-              Political nicknames like &ldquo;Sleepy Joe&rdquo; operate
-              similarly, as critique is packaged into short, repeatable forms.
-              But when the same kind of renaming is directed toward someone with
-              less social power, or used in contexts where the target is not
-              present, it can lose some of its playful quality and take on a
-              more negative tone. The form stays the same, but the social
-              meaning shifts.</span
-            >
-          </p>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--orange)">b</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >e</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >h</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >d</span
+              >
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--orange)">N</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >c</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >k</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >a</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >m</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >e</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >s</span
+              >
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--orange)">a</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >d</span
+              >
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--orange)">N</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >a</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >m</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >e</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >c</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >a</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >l</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >l</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--orange)"
+                >g</span
+              >
+            </div>
+          </div>
+          <div class="section-text">
+            <p class="c17">
+              <span class="c0"
+                >Nicknames are a part of everyday life. We use them to connect
+                with friends and family, show friendliness to our coworkers, and
+                signal closeness. Beyond interactions with other people, we also
+                frequently modify the names of events, places, courses, and
+                other aspects of our lives. Wordplay, as it's known, presents
+                itself commonly in games and puzzles, conversational humor, and
+                broad-based media. Much of it feels clever and funny because it
+                depends on a recognizable connection between the original form
+                and the modified one. When people understand the reasoning
+                behind these modifications, wordplay can create a sense of
+                shared knowledge. Several linguistic aspects, including
+                substitution, minimal pairs, and periodic preservation make for
+                effective puns, nicknames, and name calling.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c17">
+              <span class="c3"
+                >In its simplest form, substitution refers to replacing a word,
+                or part of a word, with another sound or linguistic element.
+                Many nicknames and puns are created using different forms of
+                substitution, like onset (<span class="c9">Br</span>ook &rarr;
+                <span class="c9">Cr</span>ook), vowel (B<span class="c9">e</span
+                >n &rarr; B<span class="c9">u</span>n), coda (Ma<span class="c9"
+                  >tt</span
+                >
+                &rarr; Ma<span class="c9">d</span>), blend/portmanteau (APMA
+                0360 &rarr; CRAPMA 3-Shitty), or affixation substitution (Shell
+                &rarr; Shelly).<sup><a href="#ftnt1" id="ftnt_ref1">1</a></sup>
+                Generally, the more layered the substitution is, such as
+                combining multiple substitution types, the more satisfying the
+                pun feels. For example, APMA 0360 &rarr; CRAPMA 3-Shitty works
+                through multiple overlapping and rhyming effects, while Ben
+                &rarr; Bun uses just one vowel change.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <table class="c24">
+              <tr class="c2">
+                <td class="c5">
+                  <p class="c15">
+                    <span class="c18 c16">Substitution Type</span>
+                  </p>
+                </td>
+                <td class="c21">
+                  <p class="c15"><span class="c16 c18">Definition</span></p>
+                </td>
+                <td class="c8">
+                  <p class="c15"><span class="c16">Example</span></p>
+                </td>
+              </tr>
+              <tr class="c2">
+                <td class="c5">
+                  <p class="c15"><span class="c4 c3">Onset</span></p>
+                </td>
+                <td class="c21">
+                  <p class="c14">
+                    <span class="c0">Changing the first consonant sound</span>
+                  </p>
+                </td>
+                <td class="c8">
+                  <p class="c14"><span class="c0">Brook &rarr; Crook</span></p>
+                </td>
+              </tr>
+              <tr class="c2">
+                <td class="c5">
+                  <p class="c15"><span class="c4 c3">Coda</span></p>
+                </td>
+                <td class="c21">
+                  <p class="c14">
+                    <span class="c0">Changing final consonant sound</span>
+                  </p>
+                </td>
+                <td class="c8">
+                  <p class="c14"><span class="c0">Matt &rarr; Mad</span></p>
+                </td>
+              </tr>
+              <tr class="c2">
+                <td class="c5">
+                  <p class="c15"><span class="c4 c3">Vowel</span></p>
+                </td>
+                <td class="c21">
+                  <p class="c14">
+                    <span class="c0">Changing only the vowel sound</span>
+                  </p>
+                </td>
+                <td class="c8">
+                  <p class="c14"><span class="c0">Ben &rarr; Bun</span></p>
+                </td>
+              </tr>
+              <tr class="c2">
+                <td class="c5">
+                  <p class="c15">
+                    <span class="c4 c3">Blend/Portmanteau</span>
+                  </p>
+                </td>
+                <td class="c21">
+                  <p class="c14">
+                    <span class="c0"
+                      >Combining original name with a meaningful word</span
+                    >
+                  </p>
+                </td>
+                <td class="c8">
+                  <p class="c14">
+                    <span class="c0">APMA + crap &rarr; CRAPMA</span>
+                  </p>
+                </td>
+              </tr>
+              <tr class="c2">
+                <td class="c5">
+                  <p class="c15"><span class="c4 c3">Affixation</span></p>
+                </td>
+                <td class="c21">
+                  <p class="c14">
+                    <span class="c0"
+                      >Adding a prefix or suffix to the original word</span
+                    >
+                  </p>
+                </td>
+                <td class="c8">
+                  <p class="c14"><span class="c0">Shell &rarr; Shelly</span></p>
+                </td>
+              </tr>
+              <tr class="c2">
+                <td class="c5">
+                  <p class="c15"><span class="c3 c4">Rhyming</span></p>
+                </td>
+                <td class="c21">
+                  <p class="c14">
+                    <span class="c0"
+                      >Adding or changing material so the new form rhymes with
+                      the original</span
+                    >
+                  </p>
+                </td>
+                <td class="c8">
+                  <p class="c14">
+                    <span class="c0">Trump &rarr; Dump Trump</span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div class="section-text">
+            <p class="c17">
+              <span class="c3"
+                >Many forms of substitution are also minimal pairs&ndash;words
+                that are identical in all sounds but one (e.g. got vs get).<sup
+                  ><a href="#ftnt2" id="ftnt_ref2">2</a></sup
+                >
+                Minimal pairs are the foundation of creating worthwhile
+                nicknames, and having an understanding of how different pairs
+                interact with each other can help create more complex forms. For
+                example, APMA 1200 can be broken into several phoneme pairs:
+                APMA: APP - muh, 1200: TWELV HUN-drid, and can be altered to
+                exhibit several qualities of the class: APMA 1200 &rarr; CRAPMA
+                Twelve-bun-dread. The modification makes use of different
+                minimal pairs (apma &rarr; crapma, hun &rarr; bun, drid &rarr;
+                dread) while keeping an identifying piece of the original form
+                (twelve). Prosody preservation maintains the rhythm and emotion
+                behind original speech and is necessary for the audience to
+                understand the pun. For example, when a word has a distinctive
+                stress pattern, an effective modification would attempt to
+                preserve that prosody. For example, Beyonc&eacute; &rarr;
+                Beyon-slay works because it keeps the rhythm and stress pattern
+                of the original name intact. By contrast, Beyonc&eacute; &rarr;
+                Queen-onc&eacute; feels less natural. Although
+                <span class="c6">Bey</span> and
+                <span class="c6">Queen</span> are both one syllable, they are
+                not prosodically equivalent. <span class="c6">Queen</span> ends
+                with an /n/ sound, making the syllable feel closed and heavier:
+                queen = /kwi:n/. <span class="c6">Bey</span>, By contrast, is
+                open and lighter: bey = /be&#618;/.</span
+              >
+            </p>
+          </div>
         </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c3"
-              >These forms are both playful and offensive, which is where face
-              theory comes in.<sup><a href="#ftnt5" id="ftnt_ref5">5</a></sup> A
-              modified name can affect both a positive face, wanting to be
-              liked, and a negative face, wanting control over how you are
-              represented.<sup><a href="#ftnt6" id="ftnt_ref6">6</a></sup> What
-              keeps it from going too far is indirection. Because the critique
-              is implied rather than stated outright and the nickname is similar
-              to the original name, it softens it. But if that balance is
-              missing and if there is no shared understanding or no relationship
-              to support it, the same nickname can easily feel like an
-              insult.</span
-            >
-          </p>
+
+        <!-- ── SECTION 2 ── -->
+        <div id="sec-examples" class="content-section">
+          <div class="section-heading">
+            <div>
+              <span class="sub-letter" style="background: var(--blue)">E</span
+              ><span class="sub-letter" style="background: var(--blue)">x</span
+              ><span class="sub-letter" style="background: var(--blue)">a</span
+              ><span class="sub-letter" style="background: var(--blue)">m</span
+              ><span class="sub-letter" style="background: var(--blue)">p</span
+              ><span class="sub-letter" style="background: var(--blue)">l</span
+              ><span class="sub-letter" style="background: var(--blue)">e</span
+              ><span class="sub-letter" style="background: var(--blue)">s</span>
+            </div>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >To better understand how phonological substitution works in
+                real contexts, we have compiled a number of nickname and
+                wordplay examples from three primary sources: historical and
+                literary texts, social media platforms, and personal
+                interactions. This range will let us capture both long-standing
+                traditions of wordplay and also more contemporary or rapidly
+                evolving forms.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >From historical and literary sources, we see that playful
+                renaming has deep roots. For example, William Shakespeare often
+                used puns based on sound similarity, often relying on rhyming
+                and minimal pair structures.<sup
+                  ><a href="#ftnt3" id="ftnt_ref3">3</a></sup
+                >
+                One well-known instance comes from
+                <span class="c6">Romeo and Juliet</span>, where Mercutio puns on
+                the word &ldquo;grave.&rdquo; As he dies, he says &ldquo;ask for
+                me tomorrow, and you shall find me a grave man.&rdquo; Grave
+                here means &ldquo;serious&rdquo; and &ldquo;dead/buried.&rdquo;
+                The humor comes from the phonological identity of the words
+                paired with two different meanings. Just a fun note &ndash;
+                <span class="c6">Gnomeo and Juliet</span>, the animated
+                adaptation of <span class="c6">Romeo and Juliet</span> with
+                gnomes, is another example of play on words. The name Romeo is
+                transformed into <span class="c6">Gnomeo</span> through onset
+                substitution. This pun keeps the original phonological structure
+                while introducing a new semantic element, making the reference
+                immediately recognizable and humorous.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >Moreover, in political contexts, nicknames have long been used
+                to convey critique or satire. For example, figures like Richard
+                Nixon were labeled with modified names like &ldquo;Tricky
+                Dick,&rdquo; which uses rhyming and affixation to convey
+                negative meaning while remaining memorable.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >Social media provides a more dynamic and creative dataset.
+                Platforms like Tiktok, Reddit, and Twitter (X) are especially
+                rich in nickname formation. Users often create names like
+                &ldquo;Sleepy Joe&rdquo; for Joe Biden or &ldquo;Florida
+                Man,&rdquo; which rely on rhythm, repetition, and cultural
+                context. Rhyming constructions like &ldquo;Slick Rick&rdquo; or
+                &ldquo;Messy Jessie&rdquo; are also common, showing how prosodic
+                patterns enhance memorability. These examples tend to spread
+                quickly because they are easy to recognize and replicate.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >Personal and in-group examples show another layer of usage.
+                Within friend groups or classrooms, nicknames often rely on
+                shared experiences or inside jokes. As seen in Part 1, APMA 1200
+                becoming &ldquo;CRAPMA Twelve-bun-dread&rdquo; shows multiple
+                substitution types, including blending (APMA &rarr; CRAPMA),
+                vowel substitution (hun &rarr; bun), and rhyming (drid &rarr;
+                dread). Similarly, names like &ldquo;Snack Zack&rdquo; or
+                &ldquo;Lazy Daisy,&rdquo; combine rhyming with semantic
+                labeling, reinforcing both sound similarity and descriptive
+                meaning.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >Each example in our dataset was annotated based on four
+                criteria: the original and modified form, the type of
+                substitution used, the semantic meaning introduced, and the
+                social context. This allowed us to compare how different
+                substitution strategies function across settings. Several
+                patterns emerged from this analysis. First, simpler
+                substitutions, especially onset changes and rhyming, appear most
+                frequently. These forms are easy to create and recognize, making
+                them effective in fast-paced environments like social media.
+                Second, more complex forms, like blends and multi-layered
+                substitutions, are less common but often perceived as more
+                creative or humorous. These tend to appear in closer social
+                groups where shared knowledge supports more elaborate
+                wordplay.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >Finally, context plays an important role in determining how a
+                nickname is interpreted. The same phonological structure can
+                feel affectionate, humorous, or insulting depending on who is
+                using it and why. This highlights that while phonological
+                patterns provide the structure for nickname formation, meaning
+                is ultimately shaped by social use.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >Overall, this dataset demonstrates that nickname formation is
+                not random, but follows recognizable patterns that balance
+                phonological similarity, semantic meaning, and social context.
+                These findings provide the empirical foundation for both our
+                analysis and the design of our interactive nickname
+                generator.</span
+              >
+            </p>
+          </div>
         </div>
-        <div class="section-text">
-          <p class="c1">
-            <span class="c0"
-              >Overall, playful renaming works both because it sounds right, and
-              because it is shaped by social context: it depends on shared
-              knowledge, relational context, and power. These constraints
-              determine whether a form is successful or not.</span
-            >
-          </p>
+
+        <!-- ── SECTION 3 ── -->
+        <div id="sec-pragmatics" class="content-section">
+          <div class="section-heading">
+            <div>
+              <span class="sub-letter" style="background: var(--purple)">P</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >r</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >a</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >g</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >m</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >a</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >t</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >c</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >s</span
+              >
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--purple)">a</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >d</span
+              >
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--purple)">S</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >o</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >c</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >o</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >l</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >n</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >g</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >u</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >s</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >t</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >i</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >c</span
+              ><span class="sub-letter" style="background: var(--purple)"
+                >s</span
+              >
+            </div>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >Phonological structure explains how nicknames like
+                &ldquo;Crook&rdquo; from &ldquo;Brook&rdquo; are constructed,
+                but it does not explain exactly why they land. Their success
+                depends on social context: shared knowledge, relationships
+                between speakers, and the direction of the critique.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >The first of the criteria is shared knowledge the audience
+                already knows what is being referenced. The concept of common
+                ground captures this: speakers rely on information they assume
+                is shared.<sup><a href="#ftnt4" id="ftnt_ref4">4</a></sup>
+                &ldquo;Crook&rdquo; only works if the listener knows who Brook
+                is and understands the implication or context of the nickname.
+                Without it, the form does not read as clever, it just reads like
+                a different word. This pattern holds across the examples
+                provided earlier. In-group examples like &ldquo;CRAPMA
+                3-Shitty&rdquo; depend on specific shared class experiences,
+                while broader forms like &ldquo;Tricky Dick&rdquo; rely on
+                widely available cultural knowledge.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >The second of the success criteria is the relationship between
+                the speakers and understanding that not everyone is privy to use
+                these forms. Playful renaming signals an in-group. Using a
+                nickname implies a closeness and familiarity with both the
+                phrase and the context, which means the same phrase can shift
+                meaning depending on who uses it. For example, if a close friend
+                uses the nickname, it would read as affiliative. However, if an
+                outsider uses the same phrase, it could feel presumptuous or
+                cause confusion. In both situations, the phonological structure
+                stays the same, but the interpretation does not. Therefore,
+                social position determines how the nickname is received.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >The third and final success criteria of these nicknames is the
+                direction of the critique because many of these forms carry a
+                judgment, which brings in power. Dysphemism describes the use of
+                loaded substitutions. When the course &ldquo;APMA 0360&rdquo; is
+                renamed to &ldquo;CRAPMA 3-Shitty,&rdquo; the critique is
+                directed upward at the professor and the course material, which
+                makes it feel collective and justified.<sup
+                  ><a href="#ftnt5" id="ftnt_ref5">5</a></sup
+                >
+                Political nicknames like &ldquo;Sleepy Joe&rdquo; operate
+                similarly, as critique is packaged into short, repeatable forms.
+                But when the same kind of renaming is directed toward someone
+                with less social power, or used in contexts where the target is
+                not present, it can lose some of its playful quality and take on
+                a more negative tone. The form stays the same, but the social
+                meaning shifts.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >These forms are both playful and offensive, which is where face
+                theory comes in.<sup><a href="#ftnt6" id="ftnt_ref6">6</a></sup>
+                A modified name can affect both a positive face, wanting to be
+                liked, and a negative face, wanting control over how you are
+                represented.<sup><a href="#ftnt7" id="ftnt_ref7">7</a></sup>
+                What keeps it from going too far is indirection. Because the
+                critique is implied rather than stated outright and the nickname
+                is similar to the original name, it softens it. But if that
+                balance is missing and if there is no shared understanding or no
+                relationship to support it, the same nickname can easily feel
+                like an insult.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >Overall, playful renaming works both because it sounds right,
+                and because it is shaped by social context: it depends on shared
+                knowledge, relational context, and power. These constraints
+                determine whether a form is successful or not.</span
+              >
+            </p>
+          </div>
+        </div>
+
+        <!-- ── SECTION 4 ── -->
+        <div id="sec-tool" class="content-section">
+          <div class="section-heading">
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">U</span
+              ><span class="sub-letter" style="background: var(--teal)">s</span
+              ><span class="sub-letter" style="background: var(--teal)">i</span
+              ><span class="sub-letter" style="background: var(--teal)">n</span
+              ><span class="sub-letter" style="background: var(--teal)">g</span>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">O</span
+              ><span class="sub-letter" style="background: var(--teal)">u</span
+              ><span class="sub-letter" style="background: var(--teal)">r</span>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">R</span
+              ><span class="sub-letter" style="background: var(--teal)">e</span
+              ><span class="sub-letter" style="background: var(--teal)">s</span
+              ><span class="sub-letter" style="background: var(--teal)">e</span
+              ><span class="sub-letter" style="background: var(--teal)">a</span
+              ><span class="sub-letter" style="background: var(--teal)">r</span
+              ><span class="sub-letter" style="background: var(--teal)">c</span
+              ><span class="sub-letter" style="background: var(--teal)">h</span>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">t</span
+              ><span class="sub-letter" style="background: var(--teal)">o</span>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">M</span
+              ><span class="sub-letter" style="background: var(--teal)">a</span
+              ><span class="sub-letter" style="background: var(--teal)">k</span
+              ><span class="sub-letter" style="background: var(--teal)">e</span>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">a</span>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">N</span
+              ><span class="sub-letter" style="background: var(--teal)">i</span
+              ><span class="sub-letter" style="background: var(--teal)">c</span
+              ><span class="sub-letter" style="background: var(--teal)">k</span
+              ><span class="sub-letter" style="background: var(--teal)">n</span
+              ><span class="sub-letter" style="background: var(--teal)">a</span
+              ><span class="sub-letter" style="background: var(--teal)">m</span
+              ><span class="sub-letter" style="background: var(--teal)">i</span
+              ><span class="sub-letter" style="background: var(--teal)">n</span
+              ><span class="sub-letter" style="background: var(--teal)">g</span>
+            </div>
+            <div class="title-spacer"></div>
+            <div>
+              <span class="sub-letter" style="background: var(--teal)">T</span
+              ><span class="sub-letter" style="background: var(--teal)">o</span
+              ><span class="sub-letter" style="background: var(--teal)">o</span
+              ><span class="sub-letter" style="background: var(--teal)">l</span>
+            </div>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c0"
+                >As a continued exploration of nicknaming, we built a digital
+                Nicknamer. It is programmed with the linguistic constraints of
+                playful renaming by prioritizing phonological preservation. At
+                its core, the logic utilizes the CMU Pronouncing Dictionary to
+                identify rhyme tails, the sequence of phonemes from the primary
+                stressed vowel to the end of the word. By isolating these tails,
+                the Nicknamer ensures that the generated nickname retains the
+                prosodic skeleton of a target syllable, satisfying the
+                structural requirement that a nickname must "sound right" to be
+                recognizable.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >In instances where a direct rhyme is unavailable, the logic
+                shifts to nuclei matching. Here, the algorithm matches the
+                target's vowel phonemes (e.g., /IY1/ in "Brook") regardless of
+                the surrounding consonants. This computational flexibility
+                mirrors the natural linguistic tendency toward assonance in
+                wordplay, where the "vibe" of a sound is preserved even when the
+                strict rhyme is broken, sometimes called near rhyming. By
+                allowing users to override these sounds via the dropdown menu,
+                the tool acknowledges that phonetic interpretation is subjective
+                and context-dependent.</span
+              >
+            </p>
+          </div>
+          <div class="section-text">
+            <p class="c1">
+              <span class="c3"
+                >Ultimately, what the Nicknamer lacks is the human
+                intelligence/pragmatic competence to provide semantically
+                distinct substitutes. While it succeeds at finding nicknames
+                that preserve phonetical similarity, this is only one piece of
+                the puzzle. Bear this in mind when using the Nicknamer. It is
+                programmed to provide the structural "how" through rhyme and
+                meter, but it is blind to the common ground and power dynamics
+                that constitute the "why". If the results may provide the
+                "dysphemistic" substitutions that define in-group social
+                bonding, it is purely by chance!</span
+              >
+            </p>
+          </div>
         </div>
       </div>
-      <div class="content-section">
+
+      <!-- ── WORKS CITED ── -->
+      <div id="works-cited" class="content">
         <div class="section-heading">
           <div>
-            <span class="sub-letter" style="background: var(--teal)">U</span
-            ><span class="sub-letter" style="background: var(--teal)">s</span
-            ><span class="sub-letter" style="background: var(--teal)">i</span
-            ><span class="sub-letter" style="background: var(--teal)">n</span
-            ><span class="sub-letter" style="background: var(--teal)">g</span>
+            <span class="sub-letter" style="background: var(--red)">W</span
+            ><span class="sub-letter" style="background: var(--red)">o</span
+            ><span class="sub-letter" style="background: var(--red)">r</span
+            ><span class="sub-letter" style="background: var(--red)">k</span
+            ><span class="sub-letter" style="background: var(--red)">s</span>
           </div>
           <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--teal)">O</span
-            ><span class="sub-letter" style="background: var(--teal)">u</span
-            ><span class="sub-letter" style="background: var(--teal)">r</span>
-          </div>
           <div class="title-spacer"></div>
           <div>
-            <span class="sub-letter" style="background: var(--teal)">R</span
-            ><span class="sub-letter" style="background: var(--teal)">e</span
-            ><span class="sub-letter" style="background: var(--teal)">s</span
-            ><span class="sub-letter" style="background: var(--teal)">e</span
-            ><span class="sub-letter" style="background: var(--teal)">a</span
-            ><span class="sub-letter" style="background: var(--teal)">r</span
-            ><span class="sub-letter" style="background: var(--teal)">c</span
-            ><span class="sub-letter" style="background: var(--teal)">h</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--teal)">t</span
-            ><span class="sub-letter" style="background: var(--teal)">o</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--teal)">M</span
-            ><span class="sub-letter" style="background: var(--teal)">a</span
-            ><span class="sub-letter" style="background: var(--teal)">k</span
-            ><span class="sub-letter" style="background: var(--teal)">e</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--teal)">a</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--teal)">N</span
-            ><span class="sub-letter" style="background: var(--teal)">i</span
-            ><span class="sub-letter" style="background: var(--teal)">c</span
-            ><span class="sub-letter" style="background: var(--teal)">k</span
-            ><span class="sub-letter" style="background: var(--teal)">n</span
-            ><span class="sub-letter" style="background: var(--teal)">a</span
-            ><span class="sub-letter" style="background: var(--teal)">m</span
-            ><span class="sub-letter" style="background: var(--teal)">i</span
-            ><span class="sub-letter" style="background: var(--teal)">n</span
-            ><span class="sub-letter" style="background: var(--teal)">g</span>
-          </div>
-          <div class="title-spacer"></div>
-          <div>
-            <span class="sub-letter" style="background: var(--teal)">T</span
-            ><span class="sub-letter" style="background: var(--teal)">o</span
-            ><span class="sub-letter" style="background: var(--teal)">o</span
-            ><span class="sub-letter" style="background: var(--teal)">l</span>
+            <span class="sub-letter" style="background: var(--red)">C</span
+            ><span class="sub-letter" style="background: var(--red)">i</span
+            ><span class="sub-letter" style="background: var(--red)">t</span
+            ><span class="sub-letter" style="background: var(--red)">e</span
+            ><span class="sub-letter" style="background: var(--red)">d</span>
           </div>
         </div>
-
         <div class="section-text">
-          <p class="c1">
-            <span class="c0">
-              As a continued exploration of nicknaming, we built a digital
-              Nicknamer. It is programmed with the linguistic constraints of
-              playful renaming by prioritizing phonological preservation. At its
-              core, the logic utilizes the CMU Pronouncing Dictionary to
-              identify rhyme tails, the sequence of phonemes from the primary
-              stressed vowel to the end of the word. By isolating these tails,
-              the Nicknamer ensures that the generated nickname retains the
-              prosodic skeleton of a target syllable, satisfying the structural
-              requirement that a nickname must "sound right" to be recognizable.
-            </span>
+          <p class="c11">
+            <a href="#ftnt_ref1" id="ftnt1">[1]</a
+            ><span class="c10 c3"
+              >&nbsp;https://ecampusontario.pressbooks.pub/essentialsoflinguistics/chapter/3-4-syllable-structure/</span
+            >
           </p>
         </div>
-
         <div class="section-text">
-          <p class="c1">
-            <span class="c3">
-              In instances where a direct rhyme is unavailable, the logic shifts
-              to nuclei matching. Here, the algorithm matches the target's vowel
-              phonemes (e.g., /IY1/ in "Brook") regardless of the surrounding
-              consonants. This computational flexibility mirrors the natural
-              linguistic tendency toward assonance in wordplay, where the "vibe"
-              of a sound is preserved even when the strict rhyme is broken,
-              sometimes called near rhyming. By allowing users to override these
-              sounds via the dropdown menu, the tool acknowledges that phonetic
-              interpretation is subjective and context-dependent.
-            </span>
+          <p class="c11">
+            <a href="#ftnt_ref2" id="ftnt2">[2]</a
+            ><span class="c3 c10"
+              >&nbsp;https://www.jillshooktherapy.com/blog/minimal-pairs-and-how-to-use-them</span
+            >
           </p>
         </div>
-
         <div class="section-text">
-          <p class="c1">
-            <span class="c3">
-              Ultimately, what the Nicknamer lacks is the human
-              intelligence/pragmatic competence to provide semantically distinct
-              substitutes. While it succeeds at finding nicknames that preserve
-              phonetical similarity, this is only one piece of the puzzle. Bear
-              this in mind when using the Nicknamer. It is programmed to provide
-              the structural "how" through rhyme and meter, but it is blind to
-              the common ground and power dynamics that constitute the "why". If
-              the results may provide the "dysphemistic" substitutions that
-              define in-group social bonding, it is purely by chance!
-            </span>
+          <p class="c11">
+            <a href="#ftnt_ref3" id="ftnt3">[3]</a
+            ><span class="c10 c3"
+              >&nbsp;https://bookriot.com/shakespeare-puns/</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c11">
+            <a href="#ftnt_ref4" id="ftnt4">[4]</a
+            ><span class="c10 c3"
+              >&nbsp;https://semantics.uchicago.edu/kennedy/classes/f07/pragmatics/stalnaker02.pdf</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c11">
+            <a href="#ftnt_ref5" id="ftnt5">[5]</a
+            ><span class="c10 c3"
+              >&nbsp;https://www.academia.edu/59570521/Euphemism_and_Dysphemism_Language_Used_As_Shield_and_Weapon</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c11">
+            <a href="#ftnt_ref6" id="ftnt6">[6]</a
+            ><span class="c12">&nbsp;</span
+            ><span class="c10 c3"
+              >&nbsp;https://web.stanford.edu/~eckert/PDF/GoffmanFace1967.pdf</span
+            >
+          </p>
+        </div>
+        <div class="section-text">
+          <p class="c11">
+            <a href="#ftnt_ref7" id="ftnt7">[7]</a
+            ><span class="c12">&nbsp;</span
+            ><span class="c10 c3"
+              >https://api.pageplace.de/preview/DT0400.9781107298859_A23760587/preview-9781107298859_A23760587.pdf</span
+            >
           </p>
         </div>
       </div>
-    </div>
 
-    <div class="title-row" aria-label="The Nicknamifier">
-      <span class="title-letter">T</span><span class="title-letter">h</span
-      ><span class="title-letter">e</span>
-      <span
-        class="title-letter"
-        style="
-          background: transparent;
-          box-shadow: none;
-          width: 0.4em;
-          min-width: 0;
-        "
-      >
-      </span>
-      <span class="title-letter">N</span><span class="title-letter">i</span
-      ><span class="title-letter">c</span><span class="title-letter">k</span
-      ><span class="title-letter">n</span><span class="title-letter">a</span
-      ><span class="title-letter">m</span><span class="title-letter">e</span
-      ><span class="title-letter">r</span>
+      <div class="footer">The Nicknamer. Powered by rhyme &amp; whimsy.</div>
     </div>
-
-    <!-- INPUT -->
-    <div class="input-row">
-      <input
-        id="nameInput"
-        placeholder="Type your name here…"
-        autocomplete="off"
-      />
-      <button class="big-btn" id="nicknamifyBtn">Nicknamify!</button>
-    </div>
-
-    <!-- PRONUNCIATION PANEL -->
-    <div class="pron-panel" id="pronunciationPanel">
-      <div class="pron-title">🔊 Pronunciation</div>
-      <div class="pron-sub">
-        Adjust how each part of your name sounds before we give you a nickname
-      </div>
-      <div id="pronunciationControls"></div>
-      <!-- <div class="pron-actions">
-        <button class="sec-btn" id="pronounceBtn" type="button">
-          ▶ Play my name
-        </button>
-      </div> -->
-    </div>
-
-    <!-- RESULT CARD -->
-    <div class="card" id="card">
-      <div class="card-label">✦ Your nickname ✦</div>
-      <div class="nickname-display" id="nicknameDisplay"></div>
-      <div class="definition" id="definition"></div>
-      <div class="example" id="example"></div>
-      <div class="card-actions">
-        <!-- <button class="sec-btn" id="listenAgainBtn" type="button">
-          🔊 Hear it again
-        </button> -->
-        <button
-          class="big-btn"
-          id="generateAgainBtn"
-          type="button"
-          style="font-size: 1rem; padding: 0.6rem 1.2rem"
-        >
-          Try again
-        </button>
-      </div>
-    </div>
-
-    <!-- NO RESULT -->
-    <div class="no-result" id="noResult">
-      Couldn't find a rhyme for that one. Try a different name or adjust the
-      pronunciation!
-    </div>
-    <div class="content">
-      <!-- <div class="content-section"> -->
-      <div class="section-heading">
-        <div>
-          <span class="sub-letter" style="background: var(--red)">W</span
-          ><span class="sub-letter" style="background: var(--red)">o</span
-          ><span class="sub-letter" style="background: var(--red)">r</span
-          ><span class="sub-letter" style="background: var(--red)">k</span
-          ><span class="sub-letter" style="background: var(--red)">s</span>
-        </div>
-        <div class="title-spacer"></div>
-        <div class="title-spacer"></div>
-        <div>
-          <span class="sub-letter" style="background: var(--red)">C</span
-          ><span class="sub-letter" style="background: var(--red)">i</span
-          ><span class="sub-letter" style="background: var(--red)">t</span
-          ><span class="sub-letter" style="background: var(--red)">e</span
-          ><span class="sub-letter" style="background: var(--red)">d</span>
-        </div>
-      </div>
-      <div class="section-text">
-        <p class="c11">
-          <a href="#ftnt_ref1" id="ftnt1">[1]</a
-          ><span class="c10 c3"
-            >&nbsp;https://ecampusontario.pressbooks.pub/essentialsoflinguistics/chapter/3-4-syllable-structure/</span
-          >
-        </p>
-      </div>
-      <div class="section-text">
-        <p class="c11">
-          <a href="#ftnt_ref2" id="ftnt2">[2]</a
-          ><span class="c3 c10"
-            >&nbsp;https://www.jillshooktherapy.com/blog/minimal-pairs-and-how-to-use-them</span
-          >
-        </p>
-      </div>
-      <div class="section-text">
-        <p class="c11">
-          <a href="#ftnt_ref3" id="ftnt3">[3]</a
-          ><span class="c10 c3"
-            >&nbsp;https://semantics.uchicago.edu/kennedy/classes/f07/pragmatics/stalnaker02.pdf</span
-          >
-        </p>
-      </div>
-      <div class="section-text">
-        <p class="c11">
-          <a href="#ftnt_ref4" id="ftnt4">[4]</a
-          ><span class="c10 c3"
-            >&nbsp;https://www.academia.edu/59570521/Euphemism_and_Dysphemism_Language_Used_As_Shield_and_Weapon</span
-          >
-        </p>
-      </div>
-      <div class="section-text">
-        <p class="c11">
-          <a href="#ftnt_ref5" id="ftnt5">[5]</a
-          ><span class="c10 c3"
-            >&nbsp;https://web.stanford.edu/~eckert/PDF/GoffmanFace1967.pdf</span
-          >
-        </p>
-      </div>
-      <div class="section-text">
-        <p class="c11">
-          <a href="#ftnt_ref6" id="ftnt6">[6]</a><span class="c12">&nbsp;</span
-          ><span class="c10 c3"
-            >https://api.pageplace.de/preview/DT0400.9781107298859_A23760587/preview-9781107298859_A23760587.pdf</span
-          >
-        </p>
-      </div>
-      <!-- </div> -->
-    </div>
-    <div class="footer">The Nicknamer. Powered by rhyme &amp; whimsy.</div>
+    <!-- /main -->
 
     <script>
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
+         SIDEBAR ACTIVE LINK TRACKING
+      ══════════════════════════════════════ */
+      const sbLinks = document.querySelectorAll("#sidebar a.sb-link");
+      const anchors = [...sbLinks]
+        .map((a) => {
+          const id = a.getAttribute("href").slice(1);
+          return { a, el: document.getElementById(id) };
+        })
+        .filter((x) => x.el);
+
+      function updateActive() {
+        let best = null,
+          bestTop = Infinity;
+        anchors.forEach(({ el }) => {
+          const top = el.getBoundingClientRect().top;
+          if (top <= 80 && (bestTop === Infinity || top > bestTop - Infinity)) {
+            // pick the one whose top is closest to but still above 80px
+          }
+        });
+        // Find last section whose top is at or above 80px viewport mark
+        let active = anchors[0];
+        for (const entry of anchors) {
+          const top = entry.el.getBoundingClientRect().top;
+          if (top <= 100) active = entry;
+        }
+        sbLinks.forEach((a) => a.classList.remove("active"));
+        if (active) active.a.classList.add("active");
+      }
+      window.addEventListener("scroll", updateActive, { passive: true });
+      updateActive();
+
+      /* ══════════════════════════════════════
          1. VOWEL DATA
-      ═══════════════════════════════════════════ */
+      ══════════════════════════════════════ */
       const VOWEL_LABELS = {
         SILENT: "silent (not pronounced)",
         AA1: "aa as in father",
@@ -1786,9 +1888,9 @@
         YUW1: "yoo as in use",
       };
 
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
          2. DATA STATE
-      ═══════════════════════════════════════════ */
+      ══════════════════════════════════════ */
       let WORDS = {},
         RHYMES = {},
         DEFINITIONS = {};
@@ -1827,11 +1929,9 @@
       function buildRhymeTails() {
         RHYME_TAILS = {};
         for (const [word, data] of Object.entries(WORDS)) {
-          // Support both {phonemes:[...]} and {entries:[[...],[...]]} formats
           const phonemesList = data.entries ?? [data.phonemes];
           for (const phones of phonemesList) {
             if (!phones) continue;
-            // Index every vowel-to-end tail so rhyming works on any syllable
             for (let i = 0; i < phones.length; i++) {
               if (!/[012]$/.test(phones[i])) continue;
               let end = i + 1;
@@ -1851,9 +1951,9 @@
         return phonemes.slice(idx).join(" ");
       }
 
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
          3. STRING HELPERS
-      ═══════════════════════════════════════════ */
+      ══════════════════════════════════════ */
       const normalize = (w) => w.toLowerCase().replace(/[^a-z]/g, "");
       const getNameParts = (name) => name.trim().split(/\s+/).filter(Boolean);
       function capitalizeWord(word) {
@@ -1879,24 +1979,16 @@
         return "AH1";
       }
 
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
          4. PHONEME UTILITIES
-      ═══════════════════════════════════════════ */
+      ══════════════════════════════════════ */
       function getWordPhonemes(word) {
         const clean = normalize(word);
         const entry = WORDS[clean];
         if (!entry) return null;
-        // words.json uses {phonemes:[...]} directly; entries array is a legacy fallback
         return entry.phonemes ?? entry.entries?.[0] ?? null;
       }
 
-      /**
-       * For words not in the dictionary, greedily segment left-to-right by finding
-       * the longest prefix that IS in the dictionary, then recurse on the remainder.
-       * Falls back to the regex splitter only for chunks with no dictionary match.
-       * e.g. "copeland" -> tries "copeland" (miss), "copeland"[0..7] ... "cope" (hit!)
-       *   -> then recurses on "land" (hit!) -> [cope-syls, land-syls]
-       */
       function greedySyllableSplit(str) {
         if (!str) return [];
         for (let len = str.length; len >= 2; len--) {
@@ -1913,18 +2005,16 @@
                 vowelIdxs[si + 1] !== undefined
                   ? vowelIdxs[si + 1]
                   : phonemes.length;
-              const slice = phonemes.slice(start, end);
               return {
                 text: chunk,
                 vowelCode: phonemes[vIdx],
-                phonemes: slice,
+                phonemes: phonemes.slice(start, end),
               };
             });
             const rest = greedySyllableSplit(str.slice(len));
             return [...syls, ...rest];
           }
         }
-        // No dictionary match for any prefix — fall back to regex on this chunk
         const parts = str.match(
           /[^aeiouy]*[aeiouy](?:[^aeiouy](?![aeiouy]))*/g,
         ) || [str];
@@ -1938,50 +2028,38 @@
       function getSyllables(word) {
         const clean = normalize(word);
         const entry = WORDS[clean];
-
-        if (!dataLoaded || !entry?.phonemes) {
-          return greedySyllableSplit(clean);
-        }
-
+        if (!dataLoaded || !entry?.phonemes) return greedySyllableSplit(clean);
         const phonemes = entry.phonemes;
         const vowelIdxs = phonemes
           .map((p, i) => (/[012]$/.test(p) ? i : -1))
           .filter((i) => i >= 0);
-
         return vowelIdxs.map((vIdx, si) => {
           const start = si === 0 ? 0 : vowelIdxs[si - 1] + 1;
           const end =
             vowelIdxs[si + 1] !== undefined
               ? vowelIdxs[si + 1]
               : phonemes.length;
-          const slice = phonemes.slice(start, end);
           return {
-            text: slice.map((p) => p.replace(/[012]$/, "")).join(""),
+            text: phonemes
+              .slice(start, end)
+              .map((p) => p.replace(/[012]$/, "")),
             vowelCode: phonemes[vIdx],
-            phonemes: slice,
+            phonemes: phonemes.slice(start, end),
           };
         });
       }
 
-      /* ═══════════════════════════════════════════
-         5. CONSONANT PHONEME HELPER
-         
-         Extended mapping: handles ambiguous cases like c→s/k, g→g/j, etc.
-         This is used as a FALLBACK when we don't have dictionary phonemes.
-      ═══════════════════════════════════════════ */
-
-      // Build phonemes for a consonant cluster from a custom consonant-selector
-      // override map, or fall back to letter-by-letter guessing.
+      /* ══════════════════════════════════════
+         5. CONSONANT PHONEME HELPERS
+      ══════════════════════════════════════ */
       function consonantPhonemesFull(str, overrides = {}) {
-        // overrides: { "onset" | "coda" → phoneme string like "S" or "K" }
         if (overrides.full) return [overrides.full];
-        const result = [];
+        const result = [],
+          s = str.toLowerCase();
         let i = 0;
-        const s = str.toLowerCase();
         while (i < s.length) {
-          // Digraphs first
-          const two = s.slice(i, i + 2);
-          const three = s.slice(i, i + 3);
+          const two = s.slice(i, i + 2),
+            three = s.slice(i, i + 3);
           if (three === "tch") {
             result.push("CH");
             i += 3;
@@ -2022,7 +2100,6 @@
             i += 2;
             continue;
           }
-          // Ambiguous digraphs — use overrides
           if (two === "th") {
             result.push(overrides.th ?? "TH");
             i += 2;
@@ -2067,26 +2144,15 @@
             result.push("M");
             i += 2;
             continue;
-          } // climb, lamb
-          // Single ambiguous letters
+          }
           const c = s[i];
           if (c === "c") {
-            result.push(
-              overrides.c ??
-                (s[i + 1] === "e" || s[i + 1] === "i" || s[i + 1] === "y"
-                  ? "S"
-                  : "K"),
-            );
+            result.push(overrides.c ?? (/[eiy]/.test(s[i + 1]) ? "S" : "K"));
             i++;
             continue;
           }
           if (c === "g") {
-            result.push(
-              overrides.g ??
-                (s[i + 1] === "e" || s[i + 1] === "i" || s[i + 1] === "y"
-                  ? "JH"
-                  : "G"),
-            );
+            result.push(overrides.g ?? (/[eiy]/.test(s[i + 1]) ? "JH" : "G"));
             i++;
             continue;
           }
@@ -2105,7 +2171,6 @@
             i++;
             continue;
           }
-          // Standard mappings
           const MAP = {
             b: "B",
             d: "D",
@@ -2129,52 +2194,37 @@
             i++;
             continue;
           }
-          i++; // skip unknowns
+          i++;
         }
         return result;
       }
 
-      /* ═══════════════════════════════════════════
-         5b. CONSONANT OVERRIDE HELPERS
-         
-         Read the consonant-selector dropdowns for a given syllable position.
-         Returns an overrides object for consonantPhonemesFull().
-      ═══════════════════════════════════════════ */
       function getConsonantOverrides(pIndex, sIndex) {
-        const overrides = {};
-        // We look for all selects with id starting with cons-{pIndex}-{sIndex}-
-        const prefix = `cons-${pIndex}-${sIndex}-`;
+        const overrides = {},
+          prefix = `cons-${pIndex}-${sIndex}-`;
         document.querySelectorAll(`select[id^="${prefix}"]`).forEach((sel) => {
-          const key = sel.id.slice(prefix.length); // e.g. "onset-c", "coda-gh"
-          const parts = key.split("-");
-          // parts[0] = pos (onset|coda|word), parts[1] = ambig key (c, g, th, etc.)
-          const ambigKey = parts.slice(1).join("-"); // handles multi-segment keys
-          overrides[ambigKey] = sel.value; // e.g. overrides["c"] = "S"
+          const key = sel.id.slice(prefix.length);
+          const parts = key.split("-"),
+            ambigKey = parts.slice(1).join("-");
+          overrides[ambigKey] = sel.value;
         });
         return overrides;
       }
 
-      /**
-       * Build CMU phoneme array for a single syllable, respecting all dropdowns.
-       */
       function syllableToPhonemes(syl, vowelCode, pIndex, sIndex) {
-        // SILENT: emit only onset consonants
         if (vowelCode === "SILENT") {
           const onset = syl.text.replace(/[aeiouy]/gi, "");
-          const overrides = getConsonantOverrides(pIndex, sIndex);
-          return consonantPhonemesFull(onset, overrides);
+          return consonantPhonemesFull(
+            onset,
+            getConsonantOverrides(pIndex, sIndex),
+          );
         }
-
-        // If vowel unchanged and we have authoritative phonemes from the dictionary, use them.
-        if (vowelCode === syl.vowelCode && syl.phonemes?.length) {
+        if (vowelCode === syl.vowelCode && syl.phonemes?.length)
           return syl.phonemes;
-        }
-
-        // Rebuild: split text into onset / coda, apply overrides
         const overrides = getConsonantOverrides(pIndex, sIndex);
         const m = syl.text.match(/^([^aeiouy]*)([aeiouy]*)([^aeiouy]*)$/i);
-        const onset = m?.[1] ?? "";
-        const coda = m?.[3] ?? "";
+        const onset = m?.[1] ?? "",
+          coda = m?.[3] ?? "";
         return [
           ...consonantPhonemesFull(onset, overrides),
           vowelCode,
@@ -2182,23 +2232,9 @@
         ].filter(Boolean);
       }
 
-      /* ═══════════════════════════════════════════
-         6. TTS — BUILD PHONEME ARRAYS
-         
-         For nickname replacement words, ALWAYS prefer the dictionary phonemes
-         from words.json since those are authoritative CMU pronunciations.
-      ═══════════════════════════════════════════ */
-
-      /**
-       * Build a token list for speaking a name (or name part).
-       *
-       * Strategy per syllable:
-       *   - If the syllable came from a dictionary word → { type:"word", word } (Kokoro G2P)
-       *   - If reconstructed from user dropdowns → { type:"ipa", ipa, word } (inline IPA)
-       *
-       * This means dictionary words are ALWAYS spoken by Kokoro's own G2P, which is
-       * definitionally correct. Only truly unknown syllables fall back to our IPA mapping.
-       */
+      /* ══════════════════════════════════════
+         6. TTS TOKEN BUILDER
+      ══════════════════════════════════════ */
       function buildNameTokens(parts) {
         const tokens = [];
         parts.forEach((part, pIndex) => {
@@ -2207,46 +2243,6 @@
             const sel = document.getElementById(`syl-${pIndex}-${sIndex}`);
             const vowelCode = sel ? sel.value : syl.vowelCode;
             const userChanged = sel && vowelCode !== syl.vowelCode;
-
-            if (
-              !userChanged &&
-              syl.phonemes?.length &&
-              WORDS[syl.text?.toLowerCase()]
-            ) {
-              // Syllable maps to a known dictionary word — let Kokoro pronounce it
-              tokens.push({ type: "word", word: syl.text });
-            } else {
-              // Unknown or user-modified — build IPA from our mapping
-              const phones = syllableToPhonemes(syl, vowelCode, pIndex, sIndex);
-              const ipa = phones
-                .map((p) => CMU_TO_IPA[p.replace(/[012]$/, "")] ?? "")
-                .join("");
-              tokens.push({ type: "ipa", ipa, word: syl.text || part });
-            }
-          });
-        });
-        return tokens;
-      }
-
-      /**
-       * Build tokens for a nickname.
-       * The swapped syllable → plain word token (Kokoro G2P, perfect quality).
-       * All other syllables → same logic as buildNameTokens.
-       */
-      function buildNicknameTokens(parts, target, rhymeWord) {
-        const tokens = [];
-        parts.forEach((part, pIndex) => {
-          const syls = getSyllables(part);
-          syls.forEach((syl, sIndex) => {
-            if (pIndex === target.pIndex && sIndex === target.sIdx) {
-              // The substituted rhyme word — always in the dictionary, let Kokoro say it
-              tokens.push({ type: "word", word: rhymeWord });
-              return;
-            }
-            const sel = document.getElementById(`syl-${pIndex}-${sIndex}`);
-            const vowelCode = sel ? sel.value : syl.vowelCode;
-            const userChanged = sel && vowelCode !== syl.vowelCode;
-
             if (
               !userChanged &&
               syl.phonemes?.length &&
@@ -2267,35 +2263,46 @@
 
       let currentSpeakSpec = null;
 
-      function speakNickname(parts, target, rhymeWord) {
-        const tokens = buildNicknameTokens(parts, target, rhymeWord);
-        console.log("[TTS nickname] tokens:", tokens);
-        if (window.speakTokens) window.speakTokens(tokens);
-      }
-
-      function speakName(parts) {
-        const tokens = buildNameTokens(parts);
-        console.log("[TTS name] tokens:", tokens);
-        if (window.speakTokens) window.speakTokens(tokens);
-      }
-
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
          7. RHYME CANDIDATE SELECTION
-      ═══════════════════════════════════════════ */
+      ══════════════════════════════════════ */
       function pickCandidateByTail(tail, originalSyl, allowedSylCounts = [1]) {
         const candidates = RHYME_TAILS[tail] || [];
         const orig = normalize(originalSyl);
         const tailPhones = tail.split(" ");
-
         const good = candidates.filter(({ word, phonemes }) => {
           if (word === orig || word.length < 3) return false;
           const syllables = phonemes.filter((p) => /\d/.test(p)).length;
           if (!allowedSylCounts.includes(syllables)) return false;
           return phonemes.slice(-tailPhones.length).join(" ") === tail;
         });
-
         if (!good.length) return null;
-        const pick = good[Math.floor(Math.random() * good.length)];
+
+        // Group by syllable count
+        const bySylCount = {};
+        good.forEach(({ word, phonemes }) => {
+          const n = phonemes.filter((p) => /\d/.test(p)).length;
+          (bySylCount[n] = bySylCount[n] || []).push({ word, phonemes });
+        });
+
+        // Try longest groups first, preferring unused words
+        const counts = Object.keys(bySylCount)
+          .map(Number)
+          .sort((a, b) => b - a);
+        for (const count of counts) {
+          const fresh = bySylCount[count].filter(
+            (c) => !usedRhymeWords.has(c.word),
+          );
+          if (fresh.length) {
+            const pick = fresh[Math.floor(Math.random() * fresh.length)];
+            usedRhymeWords.add(pick.word);
+            return pick;
+          }
+        }
+
+        // All candidates have been used — fall back to longest group, allow repeats
+        const pool = bySylCount[counts[0]];
+        const pick = pool[Math.floor(Math.random() * pool.length)];
         usedRhymeWords.add(pick.word);
         return pick;
       }
@@ -2308,10 +2315,8 @@
           .map((ph, i) => (/[012]$/.test(ph) ? i : -1))
           .filter((i) => i >= 0);
         if (sIdx + 1 >= vowelIdxs.length) return null;
-
         const n1 = phonemes[vowelIdxs[sIdx]].replace(/[012]$/, "");
         const n2 = phonemes[vowelIdxs[sIdx + 1]].replace(/[012]$/, "");
-
         const candidates = Object.keys(WORDS).filter((w) => {
           if (w === clean || w.length < 3) return false;
           const ph = WORDS[w].phonemes;
@@ -2324,7 +2329,6 @@
             ph[vIdxs[1]].replace(/[012]$/, "") === n2
           );
         });
-
         if (!candidates.length) return null;
         const shuffled = candidates.sort(() => Math.random() - 0.5);
         const fresh = shuffled.filter((w) => !usedRhymeWords.has(w));
@@ -2333,16 +2337,36 @@
         return pick;
       }
 
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
          8. MAIN GENERATE
-      ═══════════════════════════════════════════ */
+         
+         BUG FIX: When a syllable isn't in the dictionary, the old code
+         picked the most-populated rhyme tail starting with the guessed
+         vowel, completely ignoring the actual coda consonants. This let
+         "tif" (coda = F → tail should be "IH1 F") match "grill"
+         (tail = "IH1 L") because "IH1 L" happens to be more populated.
+
+         Fix: build a proper tail from vowel + guessed coda consonants,
+         so "tif" → "IH1 F" and only words like "cliff", "whiff", "sniff"
+         can match.
+      ══════════════════════════════════════ */
+      function buildGuessedTail(vowelCode, sylText) {
+        // Extract coda consonants (everything after the last vowel letter)
+        const codaStr = sylText
+          .toLowerCase()
+          .replace(/.*[aeiouy]/i, "")
+          .replace(/[^a-z]/g, "");
+        if (!codaStr) return vowelCode; // open syllable: tail is just the vowel
+        const codaPhones = consonantPhonemesFull(codaStr);
+        return [vowelCode, ...codaPhones].join(" ");
+      }
+
       function generate() {
         const nameInput = document.getElementById("nameInput").value.trim();
         const noResult = document.getElementById("noResult");
         if (!nameInput || !dataLoaded) return;
 
         noResult.style.display = "none";
-
         const parts = getNameParts(nameInput).map(capitalizeWord);
 
         let targets = [];
@@ -2370,6 +2394,7 @@
 
         for (const target of targets) {
           if (target.vowelCode === "SILENT") continue;
+
           if (target.type === "double") {
             const candidate = pickTwoSylForTwoTarget(
               parts[target.pIndex],
@@ -2383,11 +2408,13 @@
           }
 
           if (/\(\d+\)$/.test(target.oldSyl)) continue;
+
           const fullCleanPart = normalize(parts[target.pIndex]);
           const cleanSyl = normalize(target.oldSyl);
-
           let tail = null;
+
           if (WORDS[fullCleanPart]) {
+            // Whole word is in dictionary — use authoritative phonemes
             const phonemes = WORDS[fullCleanPart].phonemes;
             const vowelIdxs = phonemes
               .map((ph, i) => (/[012]$/.test(ph) ? i : -1))
@@ -2402,29 +2429,21 @@
               tail = getRhymeTailFromPhonemes(phonemes);
             }
           } else if (WORDS[cleanSyl]) {
+            // Individual syllable is in dictionary
             tail = getRhymeTailFromPhonemes(WORDS[cleanSyl].phonemes);
           } else {
-            const guessedCode = target.vowelCode;
-            const coda = target.oldSyl
-              .toLowerCase()
-              .replace(/.*[aeiouy]/i, "")
-              .replace(/[^a-z]/g, "");
-            if (coda) {
-              tail =
-                Object.keys(RHYME_TAILS)
-                  .filter((t) => t.startsWith(guessedCode) && t !== guessedCode)
-                  .sort(
-                    (a, b) =>
-                      (RHYME_TAILS[b]?.length || 0) -
-                      (RHYME_TAILS[a]?.length || 0),
-                  )[0] || guessedCode;
-            } else {
-              tail = guessedCode;
-            }
+            // ── FIX: build a proper tail from guessed vowel + guessed coda ──
+            // Old code: picked the most-populated tail starting with guessedCode,
+            //   ignoring actual coda consonants → mismatches like "tif" → "grill"
+            // New code: explicitly include coda consonant phonemes in the tail,
+            //   so "tif" (IH1 + F) → "IH1 F", which only matches "cliff", "sniff" etc.
+            tail = buildGuessedTail(target.vowelCode, target.oldSyl);
           }
+
           if (!tail) continue;
 
-          const allowedSylCounts = target.sIdx === 0 ? [1, 2] : [1];
+          const allowedSylCounts = target.sIdx === 0 ? [1, 2, 3, 4, 5] : [1];
+
           let pick = pickCandidateByTail(tail, target.oldSyl, allowedSylCounts);
 
           if (pick) {
@@ -2432,10 +2451,14 @@
             break;
           }
 
-          const nucleusTail = tail.split(" ")[0];
-          if (nucleusTail !== tail) {
+          // Nucleus-only fallback — ONLY for open syllables (no coda consonant)
+          // If tail has more than one phoneme it contains a coda, so nucleus-only
+          // would match unrelated words (e.g. "IH1" matching "grill", "will", etc.)
+          const tailParts = tail.split(" ");
+          const tailHasCoda = tailParts.length > 1;
+          if (!tailHasCoda) {
             const pick2 = pickCandidateByTail(
-              nucleusTail,
+              tail,
               target.oldSyl,
               allowedSylCounts,
             );
@@ -2453,9 +2476,8 @@
         }
 
         const { target, rhymeWord, isDouble } = result;
-
         const origSyls = getSyllables(parts[target.pIndex]).map((s) => s.text);
-        let swappedFrom = isDouble
+        const swappedFrom = isDouble
           ? `"${origSyls[target.sIdx]}" + "${origSyls[target.sIdx + 1]}"`
           : `"${origSyls[target.sIdx]}"`;
 
@@ -2494,35 +2516,21 @@
         card.style.display = "none";
         void card.offsetWidth;
         card.style.display = "block";
-
-        setTimeout(() => speakNickname(parts, target, rhymeWord), 400);
       }
 
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
          9. PRONUNCIATION UI
-         
-         EXPANDED: Now covers many more ambiguous consonant cases:
-         - c (s vs k), g (hard vs soft/j), s (s vs z), th, ch, ph, gh, gn, x
-         - Handles both onset and coda positions independently
-      ═══════════════════════════════════════════ */
-
-      /**
-       * Detect all consonant ambiguities in a syllable's onset and coda.
-       * Returns an array of { pos, ambigKey, label, options } objects.
-       * ambigKey becomes part of the select id: cons-{p}-{s}-{pos}-{ambigKey}
-       */
+      ══════════════════════════════════════ */
       function detectConsonantAmbiguities(sylText) {
         const m = sylText.match(/^([^aeiouy]*)([aeiouy]*)([^aeiouy]*)$/i);
         if (!m) return [];
-        const onset = (m[1] || "").toLowerCase();
-        const coda = (m[3] || "").toLowerCase();
+        const onset = (m[1] || "").toLowerCase(),
+          coda = (m[3] || "").toLowerCase();
         const results = [];
 
         function check(cluster, pos) {
           if (!cluster) return;
-
-          // --- Digraph checks (consume the whole cluster if it matches) ---
-          if (/^th/.test(cluster) || /th$/.test(cluster)) {
+          if (/^th/.test(cluster) || /th$/.test(cluster))
             results.push({
               pos,
               ambigKey: "th",
@@ -2533,8 +2541,7 @@
               ],
               defaultFn: () => "TH",
             });
-          }
-          if (/^ch/.test(cluster)) {
+          if (/^ch/.test(cluster))
             results.push({
               pos,
               ambigKey: "ch",
@@ -2546,8 +2553,7 @@
               ],
               defaultFn: () => "CH",
             });
-          }
-          if (/^ph/.test(cluster) || /ph$/.test(cluster)) {
+          if (/^ph/.test(cluster) || /ph$/.test(cluster))
             results.push({
               pos,
               ambigKey: "ph",
@@ -2558,8 +2564,7 @@
               ],
               defaultFn: () => "F",
             });
-          }
-          if (/gh/.test(cluster)) {
+          if (/gh/.test(cluster))
             results.push({
               pos,
               ambigKey: "gh",
@@ -2571,8 +2576,7 @@
               ],
               defaultFn: () => "F",
             });
-          }
-          if (/^gn/.test(cluster)) {
+          if (/^gn/.test(cluster))
             results.push({
               pos,
               ambigKey: "gn",
@@ -2583,18 +2587,12 @@
               ],
               defaultFn: () => "N",
             });
-          }
-
-          // --- Single letter checks ---
-          // Only flag "c" if it's NOT part of a digraph we already handled
           if (
             /c/.test(cluster) &&
             !/ch|ck/.test(cluster) &&
             !/ph|gh/.test(cluster)
           ) {
-            // Auto-detect: c before e/i/y → S, otherwise K
             const nextChar = onset === cluster ? (m[2]?.[0] ?? "") : "";
-            const autoVal = /[eiy]/.test(nextChar) ? "S" : "K";
             results.push({
               pos,
               ambigKey: "c",
@@ -2603,12 +2601,11 @@
                 { value: "K", label: "k as in cat/cream" },
                 { value: "S", label: "s as in face/city" },
               ],
-              defaultFn: () => autoVal,
+              defaultFn: () => (/[eiy]/.test(nextChar) ? "S" : "K"),
             });
           }
           if (/g/.test(cluster) && !/gh|ng|gn/.test(cluster)) {
             const nextChar = onset === cluster ? (m[2]?.[0] ?? "") : "";
-            const autoVal = /[eiy]/.test(nextChar) ? "JH" : "G";
             results.push({
               pos,
               ambigKey: "g",
@@ -2617,11 +2614,10 @@
                 { value: "G", label: "g as in get/gift (hard)" },
                 { value: "JH", label: "j as in gem/giraffe (soft)" },
               ],
-              defaultFn: () => autoVal,
+              defaultFn: () => (/[eiy]/.test(nextChar) ? "JH" : "G"),
             });
           }
-          // "s" in coda can be /z/ (e.g. "rose", "is") — offer choice
-          if (pos === "coda" && /s$/.test(cluster) && !/sh/.test(cluster)) {
+          if (pos === "coda" && /s$/.test(cluster) && !/sh/.test(cluster))
             results.push({
               pos,
               ambigKey: "s",
@@ -2632,9 +2628,7 @@
               ],
               defaultFn: () => "S",
             });
-          }
-          // "x" in onset → KS vs Z (xylophone)
-          if (pos === "onset" && /^x/.test(cluster)) {
+          if (pos === "onset" && /^x/.test(cluster))
             results.push({
               pos,
               ambigKey: "x",
@@ -2645,7 +2639,6 @@
               ],
               defaultFn: () => "KS",
             });
-          }
         }
 
         check(onset, "onset");
@@ -2668,17 +2661,13 @@
 
         getNameParts(name).forEach((part, pIndex) => {
           const syls = getSyllables(part);
-
-          // Only show a part-level label if there are multiple syllables
           if (syls.length > 1) {
             const lbl = document.createElement("div");
             lbl.className = "pron-section-label";
             lbl.textContent = capitalizeWord(part);
             controls.appendChild(lbl);
           }
-
           syls.forEach(({ text, vowelCode }, sIndex) => {
-            /* ── Vowel row ── */
             const row = document.createElement("div");
             row.className = "pronunciation-row";
             const label = document.createElement("label");
@@ -2701,9 +2690,7 @@
             row.appendChild(select);
             controls.appendChild(row);
 
-            /* ── Consonant ambiguity rows ── */
-            const ambigs = detectConsonantAmbiguities(text);
-            ambigs.forEach(
+            detectConsonantAmbiguities(text).forEach(
               ({ pos, ambigKey, label: aLabel, options, defaultFn }) => {
                 const cRow = document.createElement("div");
                 cRow.className = "pronunciation-row consonant-row";
@@ -2725,9 +2712,9 @@
         });
       }
 
-      /* ═══════════════════════════════════════════
+      /* ══════════════════════════════════════
          10. EVENT LISTENERS
-      ═══════════════════════════════════════════ */
+      ══════════════════════════════════════ */
       document
         .getElementById("nameInput")
         .addEventListener("input", updatePronunciationUI);
@@ -2740,21 +2727,6 @@
       document.getElementById("nameInput").addEventListener("keydown", (e) => {
         if (e.key === "Enter") generate();
       });
-
-      document.getElementById("pronounceBtn").addEventListener("click", () => {
-        const name = document.getElementById("nameInput").value.trim();
-        if (!name) return;
-        const parts = getNameParts(name).map(capitalizeWord);
-        speakName(parts);
-      });
-
-      document
-        .getElementById("listenAgainBtn")
-        .addEventListener("click", () => {
-          if (!currentSpeakSpec) return;
-          const { parts, target, rhymeWord } = currentSpeakSpec;
-          speakNickname(parts, target, rhymeWord);
-        });
     </script>
   </body>
 </html>
