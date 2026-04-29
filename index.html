@@ -401,8 +401,6 @@
         background: transparent;
       }
       .title-container {
-        /* margin-top: 3rem; */
-        /* margin-bottom: 2rem; */
       }
       .title-letter::before,
       .title-letter::after {
@@ -830,7 +828,6 @@
     <!-- ══ SIDEBAR ══ -->
     <nav id="sidebar" aria-label="Page sections">
       <a class="sb-label" href="#nicknamer">The Nicknamer</a>
-
       <div class="sb-label">Sections</div>
       <a class="sb-link section-link" href="#sec-mechanics"
         >Understanding the Mechanics</a
@@ -840,7 +837,6 @@
         >Pragmatics &amp; Sociolinguistics</a
       >
       <a class="sb-link section-link" href="#sec-tool">Using Our Research</a>
-
       <a class="sb-label" href="#works-cited">Works Cited</a>
     </nav>
 
@@ -1978,18 +1974,6 @@
         return entry.phonemes ?? entry.entries?.[0] ?? null;
       }
 
-      /*
-       * greedySyllableSplit — split a string into syllable objects.
-       *
-       * FIX: Previously every syllable returned `text: chunk` (the whole
-       * matched word), so "piper" produced two syllables both with text
-       * "piper", and joining them after a swap gave "snipepiper".
-       *
-       * Now we compute a per-syllable character slice by finding the vowel
-       * letter positions inside `chunk` and slicing accordingly:
-       *   syllable 0 → chunk[0 .. nextVowelPos)   e.g. "pi"
-       *   syllable 1 → chunk[prevVowelPos+1 .. end]  e.g. "per"
-       */
       function greedySyllableSplit(str) {
         if (!str) return [];
         for (let len = str.length; len >= 2; len--) {
@@ -2001,7 +1985,6 @@
               .map((p, i) => (/[012]$/.test(p) ? i : -1))
               .filter((i) => i >= 0);
 
-            // Collect the character-level positions of each vowel letter in chunk
             const vowelLetterRe = /[aeiouy]/gi;
             const vowelCharPositions = [];
             let vm;
@@ -2009,15 +1992,11 @@
               vowelCharPositions.push(vm.index);
             }
 
-            // Build per-syllable character slices
             const sylTexts = vowelIdxs.map((_, si) => {
-              // This syllable starts just after the previous vowel letter (or at 0)
               const prevEnd =
                 si === 0 ? 0 : (vowelCharPositions[si - 1] ?? 0) + 1;
-              // This syllable ends just before the next vowel letter (or at end of chunk)
               const nextVPos = vowelCharPositions[si + 1];
-              const endPos =
-                nextVPos !== undefined ? nextVPos : chunk.length;
+              const endPos = nextVPos !== undefined ? nextVPos : chunk.length;
               return chunk.slice(prevEnd, endPos) || chunk;
             });
 
@@ -2028,7 +2007,7 @@
                   ? vowelIdxs[si + 1]
                   : phonemes.length;
               return {
-                text: sylTexts[si],        // ← FIX: per-syllable slice, not whole chunk
+                text: sylTexts[si],
                 vowelCode: phonemes[vIdx],
                 phonemes: phonemes.slice(start, end),
               };
@@ -2057,7 +2036,6 @@
           .map((p, i) => (/[012]$/.test(p) ? i : -1))
           .filter((i) => i >= 0);
 
-        // Use greedySyllableSplit to get real character-based text per syllable
         const textSyls = greedySyllableSplit(clean);
 
         return vowelIdxs.map((vIdx, si) => {
@@ -2444,6 +2422,22 @@
             tail = buildGuessedTail(target.vowelCode, target.oldSyl);
           }
 
+          // ── FIX: Apply the user's vowel dropdown override ──────────────────
+          // If the user changed the vowel via the pronunciation panel, the tail
+          // built above still reflects the CMU dictionary's phoneme, not the
+          // user's choice.  We replace just the leading vowel token in the tail
+          // so that rhyme lookup uses the vowel the user actually specified.
+          if (tail) {
+            const tailParts = tail.split(" ");
+            const dictVowel = tailParts[0]; // e.g. "AH1" (what CMU says)
+            const userVowel = target.vowelCode; // e.g. "OW1" (what user picked)
+            if (dictVowel !== userVowel) {
+              tailParts[0] = userVowel;
+              tail = tailParts.join(" ");
+            }
+          }
+          // ───────────────────────────────────────────────────────────────────
+
           if (!tail) continue;
 
           const allowedSylCounts = target.sIdx === 0 ? [1, 2, 3, 4, 5] : [1];
@@ -2455,8 +2449,8 @@
             break;
           }
 
-          const tailParts = tail.split(" ");
-          const tailHasCoda = tailParts.length > 1;
+          const tailParts2 = tail.split(" ");
+          const tailHasCoda = tailParts2.length > 1;
           if (!tailHasCoda) {
             const pick2 = pickCandidateByTail(
               tail,
@@ -2482,27 +2476,11 @@
           ? `"${origSyls[target.sIdx]}" + "${origSyls[target.sIdx + 1]}"`
           : `"${origSyls[target.sIdx]}"`;
 
-        /*
-         * FIX: Reconstruct the word by replacing only the target syllable(s)
-         * with the rhyme word, and keeping all other syllables' character text.
-         *
-         * Previously the code did:
-         *   syllables.map((s, i) => (i === target.sIdx ? rhymeWord : s.text || "")).join("")
-         * which for "piper" (syls: [{text:"piper"},{text:"piper"}]) produced
-         * "snipe" + "piper" = "snipepiper".
-         *
-         * Now each syllable has its own correct text slice ("pi", "per"),
-         * so the join correctly produces "snipe" + "" (sIdx=0 replaces "pi",
-         * sIdx=1 "per" is kept) — but we need to drop the replaced syllable(s).
-         *
-         * Strategy: replace sIdx (and sIdx+1 for double) with the rhyme word,
-         * set all other syllable slots to their text, then join.
-         */
         let finalParts = [...parts];
         const syllables = getSyllables(parts[target.pIndex]);
         const newSylTexts = syllables.map((s, i) => {
-          if (i === target.sIdx) return rhymeWord;          // replace target
-          if (isDouble && i === target.sIdx + 1) return ""; // drop 2nd syl of double swap
+          if (i === target.sIdx) return rhymeWord;
+          if (isDouble && i === target.sIdx + 1) return "";
           return s.text || "";
         });
         finalParts[target.pIndex] = capitalizeWord(newSylTexts.join(""));
@@ -2689,15 +2667,6 @@
             const row = document.createElement("div");
             row.className = "pronunciation-row";
             const label = document.createElement("label");
-            /*
-             * FIX: Previously both syllables of a multi-syllable word showed
-             * the same label (e.g. `"piper" — vowel` twice), making it
-             * impossible to tell which was which.
-             *
-             * Now single-syllable words show: "Piper — vowel"
-             * Multi-syllable words show:       "Piper, syllable 1 ("pi") — vowel"
-             *                                  "Piper, syllable 2 ("per") — vowel"
-             */
             label.textContent =
               syls.length === 1
                 ? `${capitalizeWord(part)} — vowel`
